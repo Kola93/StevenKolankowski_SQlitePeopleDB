@@ -7,6 +7,10 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        
+        <Button x:Name="BTN_Browse" Content="Browse" HorizontalAlignment="Left" Margin="658,56,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Browse_Click"/>
+        <TextBox x:Name="TXT_Box_Directory" HorizontalAlignment="Left" Height="23" Margin="86,56,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="535"/>
+        <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="658,100,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click"/>
+
+
     </Grid>
 </Window>
