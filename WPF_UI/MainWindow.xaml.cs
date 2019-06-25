@@ -15,6 +15,11 @@ using System.Windows.Shapes;
 using Microsoft.Win32; // Includes OpenFileDialog
 using System.IO; // Includes StreamReader
 using System.Data; // includes DataTable
+using System.Data.SQLite; // includes SQLite
+using System.Data.SqlClient;
+using SqliteWrapper;
+using Microsoft.CSharp;
+
 namespace WPF_UI
 {
     /// <summary>
@@ -49,8 +54,60 @@ namespace WPF_UI
         private void BTN_Import_Click(object sender, RoutedEventArgs e)
         {
             ReadDataFromFile();
+            StoreDataToDatabase();
         }
+        private void StoreDataToDatabase()
+        {
+            //string conString = @"Data Source = C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\Data\MyDatabase.db; version=3;";
+            //string dbConnectionString = @"Data Source=MyDatabase.db;Version=3;";
+            //SQLiteConnection sqlite_con = new SQLiteConnection(conString);
+            //sqlite_con.Open();
+            //string query = "select * from DatabaseTest;";
+            //SQLiteCommand sqlite_cmd = new SQLiteCommand(query, sqlite_con);
+            //SQLiteDataReader dr = sqlite_cmd.ExecuteReader();
+            
+            //while (dr.Read())
+            //{
+            //    MessageBox.Show(dr.GetString(1));
+            //}
 
+            string conString = @"Data Source = C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\Data\MyDatabase.db; version=3;";
+            using (SQLiteConnection conn = new SQLiteConnection(conString))
+            {
+                try
+                {
+                    conn.Open();
+
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(conn))
+                    {
+                        using (var transaction = conn.BeginTransaction())
+                        {
+                            
+                            //foreach (DataRow row in _ImportedData.Rows)
+                            //{
+                            //    cmd.CommandText = "INSERT INTO DatabaseTest(Data1, Data2) " + "VALUES(@data1, @data2); ";
+                            //    cmd.Parameters.AddWithValue("@data1", row["Data1"]);
+                            //    cmd.Parameters.AddWithValue("@data2", row["Data2"]);
+                            //    cmd.ExecuteNonQuery();
+                                
+                            //}
+                               cmd.CommandText = "DELETE FROM Db;";
+                            cmd.ExecuteNonQuery();
+                            transaction.Commit();
+                           
+                        }
+                        MessageBox.Show("Complete!");                     
+                    }
+                    conn.Close();
+
+                }
+                catch (Exception error)
+                {
+                    MessageBox.Show(error.Message);
+                }
+            }
+        }
         private void ReadDataFromFile()
         {
             try
