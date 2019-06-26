@@ -36,7 +36,8 @@ namespace WPF_UI
         {
             InitializeComponent();
             _ImportedData = new DataTable();
-            TXT_Box_Directory.Text = "C:/Users/Kola-Desktop/Downloads/uk-500/test.csv"; // temp only!
+            CB_Csv.IsChecked = true;
+            TXT_Box_CSV_Directory.Text = "C:/Users/Kola-Desktop/Downloads/uk-500/test.csv"; // temp only!
             Connect();
         }
 
@@ -51,7 +52,7 @@ namespace WPF_UI
             file.Filter = "CSV files (*.csv)|*.csv";
             if (file.ShowDialog() == true)
             {
-                TXT_Box_Directory.Text = file.FileName;
+                TXT_Box_CSV_Directory.Text = file.FileName;
             }
         }
 
@@ -116,7 +117,7 @@ namespace WPF_UI
         {
             try
             {
-                using (StreamReader sr = new StreamReader(TXT_Box_Directory.Text))
+                using (StreamReader sr = new StreamReader(TXT_Box_CSV_Directory.Text))
                 {
                     // Setup Header
                     string header = sr.ReadLine();
@@ -147,7 +148,7 @@ namespace WPF_UI
                         }
                         _ImportedData.Rows.Add(importedRow);
                     }
-                    TXT_Box_Directory.Text = string.Empty;
+                    TXT_Box_CSV_Directory.Text = string.Empty;
                     MessageBox.Show("Data loaded successfully!", "SUCCESS!");
                 }
             }
@@ -159,10 +160,7 @@ namespace WPF_UI
 
         private void Connect()
         {
-
-
            // Ttest();
-
 
         }
 
@@ -172,10 +170,7 @@ namespace WPF_UI
             var response = await client.GetStringAsync("https://api.postcodes.io/postcodes/BS50SR");
            
         }
-        private void Callback()
-        {
-            MessageBox.Show("Callback");
-        }
+       
         private void SetMostCommonEmailInUI()
         {
             Dictionary<string, int> commonMail = GetMostCommonEmailDomains();
@@ -258,5 +253,29 @@ namespace WPF_UI
             return rowLine.Split(',');
         }
 
+        private void CB_Database_Checked(object sender, RoutedEventArgs e)
+        {
+            TXT_Box_CSV_Directory.IsEnabled = false;
+            BTN_CSV_Browse.IsEnabled = false;
+            CB_Csv.IsChecked = false;
+
+
+            TXT_Box_Database_Directory.IsEnabled = true;
+            BTN_Database_Browse.IsEnabled = true;
+            CB_Database.IsChecked = true;
+
+        }
+
+        private void CB_Csv_Checked(object sender, RoutedEventArgs e)
+        {
+            TXT_Box_CSV_Directory.IsEnabled = true;
+            BTN_CSV_Browse.IsEnabled = true;
+            CB_Csv.IsChecked = true;
+
+
+            TXT_Box_Database_Directory.IsEnabled = false;
+            BTN_Database_Browse.IsEnabled = false;
+            CB_Database.IsChecked = false;
+        }
     }
 }
