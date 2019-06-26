@@ -5,15 +5,16 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPF_UI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="1800
+        ">
     <Grid>
-        <Button x:Name="BTN_CSV_Browse" Content="Browse" HorizontalAlignment="Left" Margin="658,56,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Browse_Click"/>
+        <Button x:Name="BTN_CSV_Browse" Content="Browse" HorizontalAlignment="Left" Margin="658,56,0,0" VerticalAlignment="Top" Width="76" Click="BTN_CSV_Browse_Click"/>
         <TextBox x:Name="TXT_Box_CSV_Directory" HorizontalAlignment="Left" Height="23" Margin="86,56,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="535"/>
         <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="658,207,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click" IsEnabled="False"/>
         <CheckBox x:Name="CB_Csv" Content="Upload new .csv file" HorizontalAlignment="Left" Margin="66,30,0,0" VerticalAlignment="Top" Checked="CB_Csv_Checked"/>
         <CheckBox x:Name="CB_Database" Content="Use existing database" HorizontalAlignment="Left" Margin="66,118,0,0" VerticalAlignment="Top" Checked="CB_Database_Checked"/>
         <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="86,145,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="535"/>
-        <Button x:Name="BTN_Database_Browse" Content="Browse" HorizontalAlignment="Left" Margin="658,148,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Browse_Click" IsEnabled="False"/>
+        <Button x:Name="BTN_Database_Browse" Content="Browse" HorizontalAlignment="Left" Margin="658,148,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Database_Browse_Click" IsEnabled="False"/>
         <Grid HorizontalAlignment="Left" Height="229" Margin="47,190,0,0" VerticalAlignment="Top" Width="238">
             <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_1" HorizontalAlignment="Left" Margin="3,55,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top" Width="93"/>
             <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_2" HorizontalAlignment="Left" Margin="3,75,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top" Width="93"/>
@@ -25,9 +26,14 @@
             <TextBlock HorizontalAlignment="Left" Margin="123,34,0,0" TextWrapping="Wrap" Text="Records" VerticalAlignment="Top" FontWeight="Bold"/>
             <TextBlock HorizontalAlignment="Left" Margin="0,34,0,0" TextWrapping="Wrap" Text="Email" VerticalAlignment="Top" FontWeight="Bold"/>
         </Grid>
-       
-       
-        
+        <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="840,30,0,0" VerticalAlignment="Top" Width="915"/>
+
+
+
+
+
+
+
 
     </Grid>
 </Window>

@@ -29,8 +29,7 @@ namespace WPF_UI
     public partial class MainWindow : Window
     {
         DataTable _ImportedData;
-        string _DatabaseSource = @"Data Source = C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\Data\MyDatabase.db; version=3;";
-
+        string _DatabaseSource;
 
         public MainWindow()
         {
@@ -39,28 +38,48 @@ namespace WPF_UI
             CB_Csv.IsChecked = true;
             TXT_Box_CSV_Directory.Text = "C:/Users/Kola-Desktop/Downloads/uk-500/test.csv"; // temp only!
             Connect();
+            
         }
 
-        private void BTN_Browse_Click(object sender, RoutedEventArgs e)
+        private void BTN_CSV_Browse_Click(object sender, RoutedEventArgs e)
         {
-            ProcessOpenFileDialog();
+            TXT_Box_CSV_Directory.Text = GetFileNameFromFileSelection(".csv");
+           
+        }
+        private void BTN_Database_Browse_Click(object sender, RoutedEventArgs e)
+        {
+            TXT_Box_Database_Directory.Text = GetFileNameFromFileSelection(".db");
+            _DatabaseSource = @"Data Source = " + TXT_Box_Database_Directory.Text + "; version=3; ";
         }
 
-        private void ProcessOpenFileDialog()
+        private string GetFileNameFromFileSelection(string p_FileExtension)
         {
             OpenFileDialog file = new OpenFileDialog();
-            file.Filter = "CSV files (*.csv)|*.csv";
+            file.Filter = "(*" + p_FileExtension + ")|*" + p_FileExtension;
             if (file.ShowDialog() == true)
             {
-                TXT_Box_CSV_Directory.Text = file.FileName;
+                BTN_Import.IsEnabled = true;
+              
+               
+                return file.FileName;
             }
+            return "";
         }
 
         private void BTN_Import_Click(object sender, RoutedEventArgs e)
         {
-            //ReadDataFromFile();
-            SetMostCommonEmailInUI();
-           // StoreDataToDatabase();
+            if (CB_Csv.IsChecked == true)
+            {
+                ReadDataFromFileCSV();
+                StoreDataToDatabase();
+            }
+            else if (CB_Database.IsChecked == true)
+            {
+                SetMostCommonEmailInUI();
+            }
+            
+          
+           
         }
         private void StoreDataToDatabase()
         {
@@ -71,39 +90,76 @@ namespace WPF_UI
             //string query = "select * from DatabaseTest;";
             //SQLiteCommand sqlite_cmd = new SQLiteCommand(query, sqlite_con);
             //SQLiteDataReader dr = sqlite_cmd.ExecuteReader();
-            
+
             //while (dr.Read())
             //{
             //    MessageBox.Show(dr.GetString(1));
             //}
-                      
-            using (SQLiteConnection conn = new SQLiteConnection(_DatabaseSource))
+            SQLiteConnection.CreateFile("MyDatabase2.db");
+            
+            using (SQLiteConnection conn = new SQLiteConnection("Data Source=MyDatabase2.db;Version=3;"))
             {
                 try
                 {
                     conn.Open();
-
-
                     using (SQLiteCommand cmd = new SQLiteCommand(conn))
                     {
                         using (var transaction = conn.BeginTransaction())
                         {
-                            
-                            //foreach (DataRow row in _ImportedData.Rows)
-                            //{
-                            //    cmd.CommandText = "INSERT INTO DatabaseTest(Data1, Data2) " + "VALUES(@data1, @data2); ";
-                            //    cmd.Parameters.AddWithValue("@data1", row["Data1"]);
-                            //    cmd.Parameters.AddWithValue("@data2", row["Data2"]);
-                            //    cmd.ExecuteNonQuery();
-                                
-                            //}
-                               cmd.CommandText = "DELETE FROM Db;";
+                            string headers = "";
+                            for (int i = 0; i < _ImportedData.Columns.Count; i++)
+                            {
+                                headers += ", [" + _ImportedData.Columns[i].ColumnName + "] text NOT NULL";
+                            }
+                            headers += ");";
+                            cmd.CommandText = "CREATE TABLE [Table_2] (" +
+                                "[Id] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL" + headers;
+
                             cmd.ExecuteNonQuery();
+
+                            string headerSeries = "";
+                            for (int i = 0; i < _ImportedData.Columns.Count; i++)
+                            {
+                                headerSeries += _ImportedData.Columns[i].ColumnName + ",";
+                            }
+                            headerSeries = headerSeries.Remove(headerSeries.Length - 1);
+                            
+                            for (int i = 0; i < _ImportedData.Rows.Count; i++)
+                            {
+                                string rowSeries = "";
+                                for (int j = 0; j < _ImportedData.Rows[i].ItemArray.Length; j++)
+                                {
+                                    rowSeries += "'" + _ImportedData.Rows[i].ItemArray.GetValue(j) + "'" + ",";
+                                }
+                                rowSeries = rowSeries.Remove(rowSeries.Length - 1);
+                                
+                                cmd.CommandText = "INSERT INTO [Table_2](" +
+                                    headerSeries +
+                                    ") VALUES (" +
+                                    rowSeries + ")";
+                                cmd.ExecuteNonQuery();
+                            }
                             transaction.Commit();
-                           
                         }
-                        MessageBox.Show("Complete!");                     
+                        //cmd.ExecuteNonQuery();
+
+
+                        //foreach (DataRow row in _ImportedData.Rows)
+                        //{
+                        //    cmd.CommandText = "INSERT INTO DatabaseTest(Data1, Data2) " + "VALUES(@data1, @data2); ";
+                        //    cmd.Parameters.AddWithValue("@data1", row["Data1"]);
+                        //    cmd.Parameters.AddWithValue("@data2", row["Data2"]);
+                        //    cmd.ExecuteNonQuery();
+
+                        //}
+                        //cmd.CommandText = "DELETE FROM Db;";
+                        //cmd.ExecuteNonQuery();
+                        //transaction.Commit();
+
+                        //}
+
                     }
+                    MessageBox.Show("Complete!");
                     conn.Close();
 
                 }
@@ -129,7 +185,15 @@ namespace WPF_UI
                     string[] headerColumns = ParseLine(header);
                     foreach (string headerColumn in headerColumns)
                     {
-                        _ImportedData.Columns.Add(headerColumn);
+                        string cleanHeaderColumn = headerColumn;
+                        if (headerColumn.Contains('"'))
+                        {
+                            if (cleanHeaderColumn[0] == '"')
+                                cleanHeaderColumn = cleanHeaderColumn.Remove(0, 1);
+                            if (cleanHeaderColumn[cleanHeaderColumn.Length - 1] == '"')
+                                cleanHeaderColumn = cleanHeaderColumn.Remove(cleanHeaderColumn.Length - 1);
+                        }
+                        _ImportedData.Columns.Add(cleanHeaderColumn);
                     }
 
                     // Process each line
@@ -144,12 +208,22 @@ namespace WPF_UI
                         string[] values = ParseLine(line);
                         for (int i = 0; i < values.Count(); i++)
                         {
-                            importedRow[i] = values[i];
+                            string cleanValues = values[i];
+                            if (cleanValues.Contains('"'))
+                            {
+                                if(cleanValues[0] == '"')
+                                    cleanValues = cleanValues.Remove(0, 1);
+                                if(cleanValues[cleanValues.Length - 1] == '"')
+                                    cleanValues = cleanValues.Remove(cleanValues.Length - 1);
+                            }
+                            importedRow[i] = cleanValues;
                         }
                         _ImportedData.Rows.Add(importedRow);
                     }
                     TXT_Box_CSV_Directory.Text = string.Empty;
                     MessageBox.Show("Data loaded successfully!", "SUCCESS!");
+
+                    dataGrid.DataContext = _ImportedData.DefaultView;
                 }
             }
             catch (Exception error)
@@ -250,7 +324,16 @@ namespace WPF_UI
 
         private static string[] ParseLine(string rowLine)
         {
-            return rowLine.Split(',');
+            //string[] seps = { "\",\"" };
+            string separator = rowLine.Replace("\",\"", "~");
+            if (separator.Contains('~'))
+            {
+                return separator.Split('~');
+            }
+            else
+            {
+                return separator.Split(',');
+            }
         }
 
         private void CB_Database_Checked(object sender, RoutedEventArgs e)
@@ -276,6 +359,9 @@ namespace WPF_UI
             TXT_Box_Database_Directory.IsEnabled = false;
             BTN_Database_Browse.IsEnabled = false;
             CB_Database.IsChecked = false;
+          //  TXT_Box_Database_Directory.Text = string.Empty;
         }
+
+      
     }
 }
