@@ -10,6 +10,15 @@
         <Button x:Name="BTN_Browse" Content="Browse" HorizontalAlignment="Left" Margin="658,56,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Browse_Click"/>
         <TextBox x:Name="TXT_Box_Directory" HorizontalAlignment="Left" Height="23" Margin="86,56,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="535"/>
         <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="658,100,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click"/>
+        <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_1" HorizontalAlignment="Left" Margin="201,230,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="93"/>
+        <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_2" HorizontalAlignment="Left" Margin="201,246,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="93"/>
+        <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_3" HorizontalAlignment="Left" Margin="201,262,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="93"/>
+        <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Value_1" HorizontalAlignment="Left" Margin="86,230,0,0" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Value_2" HorizontalAlignment="Left" Margin="86,246,0,0" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Value_3" HorizontalAlignment="Left" Margin="86,262,0,0" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <TextBlock HorizontalAlignment="Left" Margin="86,192,0,0" TextWrapping="Wrap" Text="Most common email addresses" VerticalAlignment="Top"/>
+        <TextBlock HorizontalAlignment="Left" Margin="86,208,0,0" TextWrapping="Wrap" Text="Records" VerticalAlignment="Top" FontWeight="Bold"/>
+        <TextBlock HorizontalAlignment="Left" Margin="201,209,0,0" TextWrapping="Wrap" Text="Email" VerticalAlignment="Top" FontWeight="Bold"/>
 
 
     </Grid>

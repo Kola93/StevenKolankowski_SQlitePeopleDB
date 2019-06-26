@@ -19,7 +19,8 @@ using System.Data.SQLite; // includes SQLite
 using System.Data.SqlClient;
 using SqliteWrapper;
 using Microsoft.CSharp;
-
+using System.Net.Http;
+using Newtonsoft.Json;
 namespace WPF_UI
 {
     /// <summary>
@@ -28,12 +29,15 @@ namespace WPF_UI
     public partial class MainWindow : Window
     {
         DataTable _ImportedData;
+        string _DatabaseSource = @"Data Source = C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\Data\MyDatabase.db; version=3;";
+
 
         public MainWindow()
         {
             InitializeComponent();
             _ImportedData = new DataTable();
             TXT_Box_Directory.Text = "C:/Users/Kola-Desktop/Downloads/uk-500/test.csv"; // temp only!
+            Connect();
         }
 
         private void BTN_Browse_Click(object sender, RoutedEventArgs e)
@@ -53,8 +57,9 @@ namespace WPF_UI
 
         private void BTN_Import_Click(object sender, RoutedEventArgs e)
         {
-            ReadDataFromFile();
-            StoreDataToDatabase();
+            //ReadDataFromFile();
+            SetMostCommonEmailInUI();
+           // StoreDataToDatabase();
         }
         private void StoreDataToDatabase()
         {
@@ -70,9 +75,8 @@ namespace WPF_UI
             //{
             //    MessageBox.Show(dr.GetString(1));
             //}
-
-            string conString = @"Data Source = C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\Data\MyDatabase.db; version=3;";
-            using (SQLiteConnection conn = new SQLiteConnection(conString))
+                      
+            using (SQLiteConnection conn = new SQLiteConnection(_DatabaseSource))
             {
                 try
                 {
@@ -108,7 +112,7 @@ namespace WPF_UI
                 }
             }
         }
-        private void ReadDataFromFile()
+        private void ReadDataFromFileCSV()
         {
             try
             {
@@ -153,9 +157,106 @@ namespace WPF_UI
             }
         }
 
+        private void Connect()
+        {
+
+
+           // Ttest();
+
+
+        }
+
+        public async void Ttest()
+        {
+            HttpClient client = new HttpClient();
+            var response = await client.GetStringAsync("https://api.postcodes.io/postcodes/BS50SR");
+           
+        }
+        private void Callback()
+        {
+            MessageBox.Show("Callback");
+        }
+        private void SetMostCommonEmailInUI()
+        {
+            Dictionary<string, int> commonMail = GetMostCommonEmailDomains();
+            TXT_Block_MostCommonEmailDomain_Name_1.Text = commonMail.Keys.ElementAt(0);
+            TXT_Block_MostCommonEmailDomain_Name_2.Text = commonMail.Keys.ElementAt(1);
+            TXT_Block_MostCommonEmailDomain_Name_3.Text = commonMail.Keys.ElementAt(2);
+
+            TXT_Block_MostCommonEmailDomain_Value_1.Text = commonMail.Values.ElementAt(0).ToString();
+            TXT_Block_MostCommonEmailDomain_Value_2.Text = commonMail.Values.ElementAt(1).ToString();
+            TXT_Block_MostCommonEmailDomain_Value_3.Text = commonMail.Values.ElementAt(2).ToString();
+        }
+
+
+        private Dictionary<string, int> GetMostCommonEmailDomains()
+        {
+            using (SQLiteConnection connection = new SQLiteConnection(_DatabaseSource))
+            {
+                try
+                {
+                    connection.Open();
+                    using (SQLiteCommand command = new SQLiteCommand(connection))
+                    {
+                        try
+                        {
+                            command.CommandText = "SELECT email FROM Database_Test";
+                            command.ExecuteNonQuery();
+                            SQLiteDataReader reader = command.ExecuteReader();
+
+                            /* Read data from Table */
+                            Dictionary<string, int> mostCommonEmailDomains_Raw = new Dictionary<string, int>();
+                            while (reader.Read())
+                            {
+                                string email = reader.GetString(0);
+                                string emailDomain = email.Substring((email.IndexOf("@") + 1), email.Length - (email.IndexOf("@") + 1));
+
+                                if (!mostCommonEmailDomains_Raw.ContainsKey(emailDomain))
+                                {
+                                    mostCommonEmailDomains_Raw.Add(emailDomain, 1);
+                                }
+                                else
+                                {
+                                    foreach (var key in mostCommonEmailDomains_Raw.Where(item => item.Key == emailDomain).Select(item => item.Key).ToList())
+                                    {
+                                        mostCommonEmailDomains_Raw[key] += 1;
+                                    }
+                                }
+                            }
+
+                            /* Extract the three most common domains */
+                            Dictionary<string, int> mostThreeCommonEmailDomains = new Dictionary<string, int>();
+                            int counter = 3;
+                            foreach (KeyValuePair<string, int> item in mostCommonEmailDomains_Raw.OrderByDescending(key => key.Value))
+                            {
+                                counter--;
+                                mostThreeCommonEmailDomains.Add(item.Key, item.Value);
+                                if (counter < 1)
+                                    break;
+                            }
+
+                            connection.Close();
+                            return mostThreeCommonEmailDomains;
+                        }
+                        catch (Exception error)
+                        {
+                            MessageBox.Show(error.Message);
+                            return null;
+                        }
+                    }
+                }
+                catch (Exception error)
+                {
+                    MessageBox.Show(error.Message);
+                    return null;
+                }
+            }
+        }
+
         private static string[] ParseLine(string rowLine)
         {
             return rowLine.Split(',');
         }
+
     }
 }
