@@ -28,28 +28,55 @@ namespace WPF_UI
     /// </summary>
     public partial class MainWindow : Window
     {
-        DataTable _ImportedData;
+        DataTable _Data;
         string _DatabaseSource;
-
+        string _DatabaseTableName;
         public MainWindow()
         {
             InitializeComponent();
-            _ImportedData = new DataTable();
-            CB_Csv.IsChecked = true;
+            Reset();
+            _Data = new DataTable();
             TXT_Box_CSV_Directory.Text = "C:/Users/Kola-Desktop/Downloads/uk-500/test.csv"; // temp only!
+
+            CB_Csv.IsChecked = true;
             Connect();
-            
         }
 
         private void BTN_CSV_Browse_Click(object sender, RoutedEventArgs e)
         {
             TXT_Box_CSV_Directory.Text = GetFileNameFromFileSelection(".csv");
-           
+
         }
         private void BTN_Database_Browse_Click(object sender, RoutedEventArgs e)
         {
             TXT_Box_Database_Directory.Text = GetFileNameFromFileSelection(".db");
             _DatabaseSource = @"Data Source = " + TXT_Box_Database_Directory.Text + "; version=3; ";
+        }
+        private void BTN_ProcessMostCommonEmailAddresses_Click(object sender, RoutedEventArgs e)
+        {
+            if (TXT_Box_EmailColumn.Text == string.Empty)
+            {
+                MessageBox.Show("Insert Email column name!", "Error!");
+                return;
+            }
+            SetMostCommonEmailInUI();
+        }
+
+        private void BTN_Reset_Click(object sender, RoutedEventArgs e)
+        {
+            Reset();
+        }
+
+        private void Reset()
+        {
+            _Data = null;
+            _Data = new DataTable();
+            /* Assign DataGrid Reference */
+            dataGrid.DataContext = null;
+           // dataGrid.Items.Refresh();
+            Panel_MostCommonEmailAddresses.Visibility = Visibility.Hidden;
+            CB_Csv.IsChecked = true;
+            EnableDirectoryPanel();
         }
 
         private string GetFileNameFromFileSelection(string p_FileExtension)
@@ -59,29 +86,100 @@ namespace WPF_UI
             if (file.ShowDialog() == true)
             {
                 BTN_Import.IsEnabled = true;
-              
-               
                 return file.FileName;
             }
             return "";
         }
-
+        private void DisableDirectoryPanel()
+        {
+            Panel_DirectorySelection.IsEnabled = false;
+        }
+        private void EnableDirectoryPanel()
+        {
+            Panel_DirectorySelection.IsEnabled = true;
+        }
         private void BTN_Import_Click(object sender, RoutedEventArgs e)
         {
             if (CB_Csv.IsChecked == true)
             {
+                if (TXT_Box_CSV_Separator.Text == string.Empty)
+                {
+                    MessageBox.Show("Insert Separator", "Error!");
+                    return;
+                }
+               // Reset();
                 ReadDataFromFileCSV();
-                StoreDataToDatabase();
+                CreateNewDatabaseAndTable();
             }
             else if (CB_Database.IsChecked == true)
             {
-                SetMostCommonEmailInUI();
+                if (TXT_Box_Database_TableName.Text == string.Empty)
+                {
+                    MessageBox.Show("Insert Table Name", "Error!");
+                    return;
+                }
+              //  Reset();
+                _DatabaseTableName = TXT_Box_Database_TableName.Text;
+                ReadDataFromDatabase();
             }
-            
-          
-           
+            Panel_MostCommonEmailAddresses.Visibility = Visibility.Visible;
+            DisableDirectoryPanel();
         }
-        private void StoreDataToDatabase()
+
+        private void ReadDataFromDatabase()
+        {
+            using (SQLiteConnection connection = new SQLiteConnection(_DatabaseSource))
+            {
+                try
+                {
+                    connection.Open();
+                    using (SQLiteCommand command = new SQLiteCommand(connection))
+                    {
+                        try
+                        {
+                            /* Setup SQLite Command */
+                            command.CommandText = "SELECT * FROM " + _DatabaseTableName;
+                            command.ExecuteNonQuery();
+                            SQLiteDataReader reader = command.ExecuteReader();
+
+                            /* Setup table name */
+                            _Data.TableName = _DatabaseTableName;
+
+                            /* Setup Headers */
+                            for (int i = 1; i < reader.FieldCount; i++)
+                            {
+                                _Data.Columns.Add(reader.GetName(i));
+                            }
+
+                            /* Setup Rows */
+                            while (reader.Read())
+                            {
+                                DataRow newRow = _Data.NewRow();
+                                for (int i = 1; i < reader.FieldCount; i++)
+                                {
+                                    string value = reader.GetString(i);
+                                    newRow[i - 1] = value;
+                                }
+                                _Data.Rows.Add(newRow);
+                            }
+                            /* Assign DataGrid Reference */
+                            dataGrid.DataContext = _Data.DefaultView;
+                            MessageBox.Show("Data Imported!", "SUCCESS!");
+                        }
+                        catch (Exception error)
+                        {
+                            MessageBox.Show(error.Message);
+                        }
+                    }
+                }
+                catch (Exception error)
+                {
+                    MessageBox.Show(error.Message);
+                }
+            }
+        }
+
+        private void CreateNewDatabaseAndTable()
         {
             //string conString = @"Data Source = C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\Data\MyDatabase.db; version=3;";
             //string dbConnectionString = @"Data Source=MyDatabase.db;Version=3;";
@@ -96,7 +194,7 @@ namespace WPF_UI
             //    MessageBox.Show(dr.GetString(1));
             //}
             SQLiteConnection.CreateFile("MyDatabase2.db");
-            
+            _DatabaseTableName = "Table_1";
             using (SQLiteConnection conn = new SQLiteConnection("Data Source=MyDatabase2.db;Version=3;"))
             {
                 try
@@ -107,39 +205,40 @@ namespace WPF_UI
                         using (var transaction = conn.BeginTransaction())
                         {
                             string headers = "";
-                            for (int i = 0; i < _ImportedData.Columns.Count; i++)
+                            for (int i = 0; i < _Data.Columns.Count; i++)
                             {
-                                headers += ", [" + _ImportedData.Columns[i].ColumnName + "] text NOT NULL";
+                                headers += ", [" + _Data.Columns[i].ColumnName + "] text NOT NULL";
                             }
                             headers += ");";
-                            cmd.CommandText = "CREATE TABLE [Table_2] (" +
+                            cmd.CommandText = "CREATE TABLE [" + _DatabaseTableName + "](" +
                                 "[Id] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL" + headers;
 
                             cmd.ExecuteNonQuery();
 
                             string headerSeries = "";
-                            for (int i = 0; i < _ImportedData.Columns.Count; i++)
+                            for (int i = 0; i < _Data.Columns.Count; i++)
                             {
-                                headerSeries += _ImportedData.Columns[i].ColumnName + ",";
+                                headerSeries += _Data.Columns[i].ColumnName + ",";
                             }
                             headerSeries = headerSeries.Remove(headerSeries.Length - 1);
-                            
-                            for (int i = 0; i < _ImportedData.Rows.Count; i++)
+
+                            for (int i = 0; i < _Data.Rows.Count; i++)
                             {
                                 string rowSeries = "";
-                                for (int j = 0; j < _ImportedData.Rows[i].ItemArray.Length; j++)
+                                for (int j = 0; j < _Data.Rows[i].ItemArray.Length; j++)
                                 {
-                                    rowSeries += "'" + _ImportedData.Rows[i].ItemArray.GetValue(j) + "'" + ",";
+                                    rowSeries += "'" + _Data.Rows[i].ItemArray.GetValue(j) + "'" + ",";
                                 }
                                 rowSeries = rowSeries.Remove(rowSeries.Length - 1);
-                                
-                                cmd.CommandText = "INSERT INTO [Table_2](" +
+
+                                cmd.CommandText = "INSERT INTO [" + _DatabaseTableName + "](" +
                                     headerSeries +
                                     ") VALUES (" +
                                     rowSeries + ")";
                                 cmd.ExecuteNonQuery();
                             }
                             transaction.Commit();
+                            _DatabaseSource = @"Data Source = " + "MyDatabase2.db" + "; version=3; ";
                         }
                         //cmd.ExecuteNonQuery();
 
@@ -159,7 +258,7 @@ namespace WPF_UI
                         //}
 
                     }
-                    MessageBox.Show("Complete!");
+                    MessageBox.Show("Table Created!", "SUCCESS!");
                     conn.Close();
 
                 }
@@ -185,15 +284,8 @@ namespace WPF_UI
                     string[] headerColumns = ParseLine(header);
                     foreach (string headerColumn in headerColumns)
                     {
-                        string cleanHeaderColumn = headerColumn;
-                        if (headerColumn.Contains('"'))
-                        {
-                            if (cleanHeaderColumn[0] == '"')
-                                cleanHeaderColumn = cleanHeaderColumn.Remove(0, 1);
-                            if (cleanHeaderColumn[cleanHeaderColumn.Length - 1] == '"')
-                                cleanHeaderColumn = cleanHeaderColumn.Remove(cleanHeaderColumn.Length - 1);
-                        }
-                        _ImportedData.Columns.Add(cleanHeaderColumn);
+                        string cleanHeaderColumn = GetStringWithoutCharacterInBeginAndEnd(headerColumn, '"');
+                        _Data.Columns.Add(cleanHeaderColumn);
                     }
 
                     // Process each line
@@ -204,26 +296,18 @@ namespace WPF_UI
                         {
                             continue;
                         }
-                        DataRow importedRow = _ImportedData.NewRow();
+                        DataRow importedRow = _Data.NewRow();
                         string[] values = ParseLine(line);
                         for (int i = 0; i < values.Count(); i++)
                         {
-                            string cleanValues = values[i];
-                            if (cleanValues.Contains('"'))
-                            {
-                                if(cleanValues[0] == '"')
-                                    cleanValues = cleanValues.Remove(0, 1);
-                                if(cleanValues[cleanValues.Length - 1] == '"')
-                                    cleanValues = cleanValues.Remove(cleanValues.Length - 1);
-                            }
-                            importedRow[i] = cleanValues;
+                            importedRow[i] = GetStringWithoutCharacterInBeginAndEnd(values[i], '"');
                         }
-                        _ImportedData.Rows.Add(importedRow);
+                        _Data.Rows.Add(importedRow);
                     }
                     TXT_Box_CSV_Directory.Text = string.Empty;
                     MessageBox.Show("Data loaded successfully!", "SUCCESS!");
 
-                    dataGrid.DataContext = _ImportedData.DefaultView;
+                    dataGrid.DataContext = _Data.DefaultView;
                 }
             }
             catch (Exception error)
@@ -232,9 +316,21 @@ namespace WPF_UI
             }
         }
 
+        private static string GetStringWithoutCharacterInBeginAndEnd(string p_EntryString, char character)
+        {
+            if (p_EntryString.Contains(character))
+            {
+                if (p_EntryString[0] == character)
+                    p_EntryString = p_EntryString.Remove(0, 1);
+                if (p_EntryString[p_EntryString.Length - 1] == character)
+                    p_EntryString = p_EntryString.Remove(p_EntryString.Length - 1);
+            }
+            return p_EntryString;
+        }
+
         private void Connect()
         {
-           // Ttest();
+            // Ttest();
 
         }
 
@@ -242,19 +338,23 @@ namespace WPF_UI
         {
             HttpClient client = new HttpClient();
             var response = await client.GetStringAsync("https://api.postcodes.io/postcodes/BS50SR");
-           
+
         }
-       
+
         private void SetMostCommonEmailInUI()
         {
             Dictionary<string, int> commonMail = GetMostCommonEmailDomains();
-            TXT_Block_MostCommonEmailDomain_Name_1.Text = commonMail.Keys.ElementAt(0);
-            TXT_Block_MostCommonEmailDomain_Name_2.Text = commonMail.Keys.ElementAt(1);
-            TXT_Block_MostCommonEmailDomain_Name_3.Text = commonMail.Keys.ElementAt(2);
+            if(commonMail != null)
+            {
+                TXT_Block_MostCommonEmailDomain_Name_1.Text = commonMail.Keys.ElementAt(0);
+                TXT_Block_MostCommonEmailDomain_Name_2.Text = commonMail.Keys.ElementAt(1);
+                TXT_Block_MostCommonEmailDomain_Name_3.Text = commonMail.Keys.ElementAt(2);
 
-            TXT_Block_MostCommonEmailDomain_Value_1.Text = commonMail.Values.ElementAt(0).ToString();
-            TXT_Block_MostCommonEmailDomain_Value_2.Text = commonMail.Values.ElementAt(1).ToString();
-            TXT_Block_MostCommonEmailDomain_Value_3.Text = commonMail.Values.ElementAt(2).ToString();
+                TXT_Block_MostCommonEmailDomain_Value_1.Text = commonMail.Values.ElementAt(0).ToString();
+                TXT_Block_MostCommonEmailDomain_Value_2.Text = commonMail.Values.ElementAt(1).ToString();
+                TXT_Block_MostCommonEmailDomain_Value_3.Text = commonMail.Values.ElementAt(2).ToString();
+            }
+            
         }
 
 
@@ -269,7 +369,7 @@ namespace WPF_UI
                     {
                         try
                         {
-                            command.CommandText = "SELECT email FROM Database_Test";
+                            command.CommandText = "SELECT " + TXT_Box_EmailColumn.Text + " FROM " + _DatabaseTableName;
                             command.ExecuteNonQuery();
                             SQLiteDataReader reader = command.ExecuteReader();
 
@@ -278,6 +378,11 @@ namespace WPF_UI
                             while (reader.Read())
                             {
                                 string email = reader.GetString(0);
+                                if (!email.Contains("@"))
+                                {
+                                    MessageBox.Show("Field: " + email + " invalid email format!");
+                                    return null;
+                                }
                                 string emailDomain = email.Substring((email.IndexOf("@") + 1), email.Length - (email.IndexOf("@") + 1));
 
                                 if (!mostCommonEmailDomains_Raw.ContainsKey(emailDomain))
@@ -322,18 +427,12 @@ namespace WPF_UI
             }
         }
 
-        private static string[] ParseLine(string rowLine)
+        private string[] ParseLine(string rowLine)
         {
-            //string[] seps = { "\",\"" };
-            string separator = rowLine.Replace("\",\"", "~");
-            if (separator.Contains('~'))
-            {
-                return separator.Split('~');
-            }
-            else
-            {
-                return separator.Split(',');
-            }
+            string newSeparator = "~";
+            string tempRowLine = rowLine.Replace(TXT_Box_CSV_Separator.Text, newSeparator);
+            return tempRowLine.Split(newSeparator.ToCharArray());
+
         }
 
         private void CB_Database_Checked(object sender, RoutedEventArgs e)
@@ -341,12 +440,12 @@ namespace WPF_UI
             TXT_Box_CSV_Directory.IsEnabled = false;
             BTN_CSV_Browse.IsEnabled = false;
             CB_Csv.IsChecked = false;
-
+            TXT_Box_CSV_Separator.IsEnabled = false;
 
             TXT_Box_Database_Directory.IsEnabled = true;
             BTN_Database_Browse.IsEnabled = true;
             CB_Database.IsChecked = true;
-
+            TXT_Box_Database_TableName.IsEnabled = true;
         }
 
         private void CB_Csv_Checked(object sender, RoutedEventArgs e)
@@ -354,14 +453,15 @@ namespace WPF_UI
             TXT_Box_CSV_Directory.IsEnabled = true;
             BTN_CSV_Browse.IsEnabled = true;
             CB_Csv.IsChecked = true;
-
+            TXT_Box_CSV_Separator.IsEnabled = true;
 
             TXT_Box_Database_Directory.IsEnabled = false;
             BTN_Database_Browse.IsEnabled = false;
             CB_Database.IsChecked = false;
-          //  TXT_Box_Database_Directory.Text = string.Empty;
+            TXT_Box_Database_TableName.IsEnabled = false;
+            //  TXT_Box_Database_Directory.Text = string.Empty;
         }
 
-      
+       
     }
 }
