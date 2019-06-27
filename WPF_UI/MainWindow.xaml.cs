@@ -21,6 +21,7 @@ using SqliteWrapper;
 using Microsoft.CSharp;
 using System.Net.Http;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 namespace WPF_UI
 {
     /// <summary>
@@ -31,6 +32,7 @@ namespace WPF_UI
         DataTable _Data;
         string _DatabaseSource;
         string _DatabaseTableName;
+        int _NumberOfEmailRecords;
         public MainWindow()
         {
             InitializeComponent();
@@ -54,14 +56,38 @@ namespace WPF_UI
         }
         private void BTN_ProcessMostCommonEmailAddresses_Click(object sender, RoutedEventArgs e)
         {
+            if (CheckEmailFieldsValidity() == true)
+            {
+                ListView_MostCommonEmails.Items.Clear();
+                ExecuteMostCommonEmailInUI();
+            }
+            
+        }
+        private bool CheckEmailFieldsValidity()
+        {
             if (TXT_Box_EmailColumn.Text == string.Empty)
             {
                 MessageBox.Show("Insert Email column name!", "Error!");
-                return;
+                return false;
             }
-            SetMostCommonEmailInUI();
+            if(TXT_Box_NumberOfRecords.Text == string.Empty)
+            {
+                MessageBox.Show("Insert number of records!", "Error!");
+                return false;
+            }
+            //Regex regex = new Regex("[^0-9]+");
+            //if (regex.IsMatch(TXT_Box_NumberOfRecords.Text))
+            //{
+            //    MessageBox.Show("You can only use numbers in records field!", "Error!");
+            //    return false;
+            //}
+            if (!int.TryParse(TXT_Box_NumberOfRecords.Text, out _NumberOfEmailRecords))
+            {
+                MessageBox.Show("You can only use numbers in records field!!", "Error!");
+                return false;
+            }
+            return true;
         }
-
         private void BTN_Reset_Click(object sender, RoutedEventArgs e)
         {
             Reset();
@@ -70,10 +96,8 @@ namespace WPF_UI
         private void Reset()
         {
             _Data = null;
-            _Data = new DataTable();
-            /* Assign DataGrid Reference */
-            dataGrid.DataContext = null;
-           // dataGrid.Items.Refresh();
+            _Data = new DataTable();          
+            dataGrid.DataContext = null;        
             Panel_MostCommonEmailAddresses.Visibility = Visibility.Hidden;
             CB_Csv.IsChecked = true;
             EnableDirectoryPanel();
@@ -338,27 +362,10 @@ namespace WPF_UI
         {
             HttpClient client = new HttpClient();
             var response = await client.GetStringAsync("https://api.postcodes.io/postcodes/BS50SR");
-
-        }
-
-        private void SetMostCommonEmailInUI()
-        {
-            Dictionary<string, int> commonMail = GetMostCommonEmailDomains();
-            if(commonMail != null)
-            {
-                TXT_Block_MostCommonEmailDomain_Name_1.Text = commonMail.Keys.ElementAt(0);
-                TXT_Block_MostCommonEmailDomain_Name_2.Text = commonMail.Keys.ElementAt(1);
-                TXT_Block_MostCommonEmailDomain_Name_3.Text = commonMail.Keys.ElementAt(2);
-
-                TXT_Block_MostCommonEmailDomain_Value_1.Text = commonMail.Values.ElementAt(0).ToString();
-                TXT_Block_MostCommonEmailDomain_Value_2.Text = commonMail.Values.ElementAt(1).ToString();
-                TXT_Block_MostCommonEmailDomain_Value_3.Text = commonMail.Values.ElementAt(2).ToString();
-            }
             
         }
 
-
-        private Dictionary<string, int> GetMostCommonEmailDomains()
+        private void ExecuteMostCommonEmailInUI()
         {
             using (SQLiteConnection connection = new SQLiteConnection(_DatabaseSource))
             {
@@ -381,10 +388,10 @@ namespace WPF_UI
                                 if (!email.Contains("@"))
                                 {
                                     MessageBox.Show("Field: " + email + " invalid email format!");
-                                    return null;
+                                    return;
                                 }
                                 string emailDomain = email.Substring((email.IndexOf("@") + 1), email.Length - (email.IndexOf("@") + 1));
-
+                                /* Sort emails into dictionary */
                                 if (!mostCommonEmailDomains_Raw.ContainsKey(emailDomain))
                                 {
                                     mostCommonEmailDomains_Raw.Add(emailDomain, 1);
@@ -398,31 +405,34 @@ namespace WPF_UI
                                 }
                             }
 
-                            /* Extract the three most common domains */
-                            Dictionary<string, int> mostThreeCommonEmailDomains = new Dictionary<string, int>();
-                            int counter = 3;
+                            if (_NumberOfEmailRecords > mostCommonEmailDomains_Raw.Count)
+                            {
+                                MessageBox.Show("Number of records is too high!", "Error!");
+                                return;
+                            }
+                            /* Add fields to the list in UI */
+                            int iteration = _NumberOfEmailRecords;
                             foreach (KeyValuePair<string, int> item in mostCommonEmailDomains_Raw.OrderByDescending(key => key.Value))
                             {
-                                counter--;
-                                mostThreeCommonEmailDomains.Add(item.Key, item.Value);
-                                if (counter < 1)
+                                iteration--;
+                                if (iteration < 0)
+                                {
                                     break;
+                                }
+                                string field = "#" + item.Value.ToString() + " " + item.Key;
+                                ListView_MostCommonEmails.Items.Add(field);
                             }
-
                             connection.Close();
-                            return mostThreeCommonEmailDomains;
                         }
                         catch (Exception error)
                         {
                             MessageBox.Show(error.Message);
-                            return null;
                         }
                     }
                 }
                 catch (Exception error)
                 {
                     MessageBox.Show(error.Message);
-                    return null;
                 }
             }
         }

@@ -5,40 +5,34 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPF_UI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="1800
+        Title="MainWindow" Height="600" Width="1800
         ">
     <Grid>
-        <Grid x:Name="Panel_DirectorySelection" Margin="0,0,987,199">
+        <Grid x:Name="Panel_DirectorySelection" Margin="0,0,987,354">
             <Button x:Name="BTN_CSV_Browse" Content="Browse" HorizontalAlignment="Left" Margin="710,56,0,0" VerticalAlignment="Top" Width="76" Click="BTN_CSV_Browse_Click"/>
-            <TextBox x:Name="TXT_Box_CSV_Directory" HorizontalAlignment="Left" Height="23" Margin="86,56,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="484"/>
-            <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="710,190,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click" IsEnabled="False"/>
+            <TextBox x:Name="TXT_Box_CSV_Directory" HorizontalAlignment="Left" Height="23" Margin="86,56,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="484" IsReadOnly="True"/>
+            <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="710,190,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click" IsEnabled="False" Background="#FF5ADC4D"/>
             <CheckBox x:Name="CB_Csv" Content="Upload new .csv file" HorizontalAlignment="Left" Margin="66,30,0,0" VerticalAlignment="Top" Checked="CB_Csv_Checked"/>
             <CheckBox x:Name="CB_Database" Content="Use existing database" HorizontalAlignment="Left" Margin="66,118,0,0" VerticalAlignment="Top" Checked="CB_Database_Checked"/>
-            <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="86,145,0,0" TextWrapping="Wrap" Text="C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\bin\Debug\MyDatabase2.db" VerticalAlignment="Top" Width="484"/>
+            <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="86,145,0,0" TextWrapping="Wrap" Text="C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\bin\Debug\MyDatabase2.db" VerticalAlignment="Top" Width="484" IsReadOnly="True"/>
             <Button x:Name="BTN_Database_Browse" Content="Browse" HorizontalAlignment="Left" Margin="710,148,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Database_Browse_Click" IsEnabled="False"/>
             <TextBlock HorizontalAlignment="Left" Margin="606,120,0,0" TextWrapping="Wrap" Text="Table Name" VerticalAlignment="Top"/>
             <TextBox x:Name="TXT_Box_Database_TableName" HorizontalAlignment="Left" Height="23" Margin="595,145,0,0" TextWrapping="Wrap" Text="Table_1" VerticalAlignment="Top" Width="81" IsEnabled="False" FontWeight="Bold"/>
-
         </Grid>
-        
-        <Grid x:Name="Panel_MostCommonEmailAddresses" HorizontalAlignment="Left" Height="160" Margin="55,235,0,0" VerticalAlignment="Top" Width="238">
-            <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_1" HorizontalAlignment="Left" Margin="4,74,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top" Width="93" Grid.ColumnSpan="2"/>
-            <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_2" HorizontalAlignment="Left" Margin="4,94,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top" Width="93" Grid.ColumnSpan="2"/>
-            <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Name_3" HorizontalAlignment="Left" Margin="4,114,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top" Width="93" Grid.ColumnSpan="2"/>
-            <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Value_1" HorizontalAlignment="Left" Margin="125,74,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top"/>
-            <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Value_2" HorizontalAlignment="Left" Margin="125,94,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top"/>
-            <TextBlock x:Name="TXT_Block_MostCommonEmailDomain_Value_3" HorizontalAlignment="Left" Margin="125,114,0,0" Text="x" TextWrapping="Wrap" VerticalAlignment="Top"/>
-            <TextBlock HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="215" Grid.ColumnSpan="2"><Run FontWeight="Bold" Text="Most common email addresses"/></TextBlock>
-            <TextBlock HorizontalAlignment="Left" Margin="125,53,0,0" TextWrapping="Wrap" Text="Records" VerticalAlignment="Top" FontWeight="Bold"/>
-            <TextBlock HorizontalAlignment="Left" Margin="1,53,0,0" TextWrapping="Wrap" Text="Email" VerticalAlignment="Top" FontWeight="Bold"/>
+
+        <Grid x:Name="Panel_MostCommonEmailAddresses" HorizontalAlignment="Left" Height="225" Margin="55,235,0,-41" VerticalAlignment="Top" Width="400">
+            <TextBlock HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="215" Grid.ColumnSpan="2" FontWeight="Bold" Text="Most common email addresses"/>
             <TextBox x:Name="TXT_Box_EmailColumn" HorizontalAlignment="Left" Height="23" Margin="161,25,-1,0" TextWrapping="Wrap" Text="email" VerticalAlignment="Top" Width="78"/>
-            <TextBlock HorizontalAlignment="Left" Margin="0,25,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23" Grid.ColumnSpan="2"><Run Text="Insert Email column name"/><Run Text=" -&gt;"/></TextBlock>
+            <TextBlock HorizontalAlignment="Left" Margin="0,25,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23" Grid.ColumnSpan="2" Text="Insert Email column name -&gt;"/>
             <Button x:Name="BTN_ProcessMostCommonEmailAddresses" Content="Execute" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="53" Margin="186,-2,-1,0" Click="BTN_ProcessMostCommonEmailAddresses_Click"/>
+            <ListView x:Name="ListView_MostCommonEmails" HorizontalAlignment="Left" Height="109" Margin="0,81,0,0" VerticalAlignment="Top" Width="239"/>
+            <TextBox x:Name="TXT_Box_NumberOfRecords" HorizontalAlignment="Left" Height="23" Margin="161,53,0,0" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="78"/>
+            <TextBlock HorizontalAlignment="Left" Margin="0,53,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23"><Run Text="Insert "/><Run Text="number of records -&gt;"/></TextBlock>
         </Grid>
         <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="840,30,0,0" VerticalAlignment="Top" Width="915"/>
         <TextBlock HorizontalAlignment="Left" Margin="606,30,0,0" TextWrapping="Wrap" Text="Separator" VerticalAlignment="Top"/>
         <TextBox x:Name="TXT_Box_CSV_Separator" HorizontalAlignment="Left" Height="23" Margin="595,56,0,0" TextWrapping="Wrap" TextAlignment="Center" Text="&quot;,&quot;" VerticalAlignment="Top" Width="81" FontWeight="Bold"/>
-        <Button x:Name="BTN_CSV_Browse_Copy" Content="Reset" HorizontalAlignment="Left" Margin="710,235,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Reset_Click"/>
+        <Button x:Name="BTN_CSV_Browse_Copy" Content="Reset" HorizontalAlignment="Left" Margin="710,235,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Reset_Click" Background="#FFF59292"/>
 
 
 
