@@ -14,10 +14,11 @@
             <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="710,190,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click" IsEnabled="False" Background="#FF5ADC4D"/>
             <CheckBox x:Name="CB_Csv" Content="Upload new .csv file" HorizontalAlignment="Left" Margin="66,30,0,0" VerticalAlignment="Top" Checked="CB_Csv_Checked"/>
             <CheckBox x:Name="CB_Database" Content="Use existing database" HorizontalAlignment="Left" Margin="66,118,0,0" VerticalAlignment="Top" Checked="CB_Database_Checked"/>
-            <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="86,145,0,0" TextWrapping="Wrap" Text="C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\bin\Debug\MyDatabase2.db" VerticalAlignment="Top" Width="484" IsReadOnly="True"/>
+            <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="86,145,0,0" TextWrapping="Wrap" Text="C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\bin\Debug\MyDatabase2.db" VerticalAlignment="Top" Width="484" IsReadOnly="True" TextOptions.TextHintingMode="Fixed"/>
             <Button x:Name="BTN_Database_Browse" Content="Browse" HorizontalAlignment="Left" Margin="710,148,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Database_Browse_Click" IsEnabled="False"/>
             <TextBlock HorizontalAlignment="Left" Margin="606,120,0,0" TextWrapping="Wrap" Text="Table Name" VerticalAlignment="Top"/>
             <TextBox x:Name="TXT_Box_Database_TableName" HorizontalAlignment="Left" Height="23" Margin="595,145,0,0" TextWrapping="Wrap" Text="Table_1" VerticalAlignment="Top" Width="81" IsEnabled="False" FontWeight="Bold"/>
+            <TextBlock x:Name="TXT_Block_LoadingTime" HorizontalAlignment="Left" Margin="460,192,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="216" Height="23" Text="Loading time: " TextAlignment="Right"/>
         </Grid>
 
         <Grid x:Name="Panel_MostCommonEmailAddresses" HorizontalAlignment="Left" Height="225" Margin="55,235,0,-41" VerticalAlignment="Top" Width="400">
@@ -33,14 +34,7 @@
         <TextBlock HorizontalAlignment="Left" Margin="606,30,0,0" TextWrapping="Wrap" Text="Separator" VerticalAlignment="Top"/>
         <TextBox x:Name="TXT_Box_CSV_Separator" HorizontalAlignment="Left" Height="23" Margin="595,56,0,0" TextWrapping="Wrap" TextAlignment="Center" Text="&quot;,&quot;" VerticalAlignment="Top" Width="81" FontWeight="Bold"/>
         <Button x:Name="BTN_CSV_Browse_Copy" Content="Reset" HorizontalAlignment="Left" Margin="710,235,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Reset_Click" Background="#FFF59292"/>
-
-
-
-
-
-
-
-
+        
 
     </Grid>
 </Window>
