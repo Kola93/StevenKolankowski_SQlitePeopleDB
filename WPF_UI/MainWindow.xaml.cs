@@ -38,18 +38,23 @@ namespace WPF_UI
         int _NumberOfEmailRecords;
         Stopwatch _ProcessingDataTime;
 
-        public class CoordinatesFromAPIObj
-        {
-            public int status;
-            public DataFromPostcodeAPI result;
-        }
-        public struct DataFromPostcodeAPI
+        public class ResultData
         {
             public string postcode;
             public float longitude;
             public float latitude;
         }
-    
+        public class ResponseObject
+        {
+            public int status;
+            public Result[] result;
+        }
+        public class Result
+        {
+            public string query;
+            public ResultData result;
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -83,54 +88,57 @@ namespace WPF_UI
                 ExecuteMostCommonEmailInUI();
             }            
         }
+        private void CreateNewCoordinateTable()
+        {
+            using (SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source))
+            {
+                try
+                {
+                    connection.Open();
+                    try
+                    {
+                        using (SQLiteCommand command = new SQLiteCommand(connection))
+                        {
+                            using (var transaction = connection.BeginTransaction())
+                            {
+                                DropTableIfExist(command, "DROP TABLE IF EXISTS " + _CurrentDatabase_CoordinatesTableName + ";");
+
+                                string headers = ", [postcode] text NOT NULL, [longitude] text NOT NULL, [latitude] text NOT NULL);";
+                                if (!CreateTable(command, _CurrentDatabase_CoordinatesTableName, headers))
+                                {
+                                    MessageBox.Show("Couldn't create " + _CurrentDatabase_CoordinatesTableName + " table!", "Error!");
+                                    connection.Close();
+                                    SQLiteConnection.ClearAllPools();
+                                    return;
+                                }
+
+                                //string headerSeries = "(postcode, longitude, latitude)";
+                                //if(InsertRowInTable(command, _CurrentDatabase_CoordinatesTableName, headerSeries, ))
+
+
+
+                                transaction.Commit();
+                            }
+
+                        }
+                    }
+                    catch (Exception error)
+                    {
+                        MessageBox.Show(error.Message);
+                    }
+                    connection.Close();
+                    SQLiteConnection.ClearAllPools();
+                }
+                catch (Exception error)
+                {
+                    MessageBox.Show(error.Message);
+                }
+            }
+        }
         private void BTN_DownloadData_Click(object sender, RoutedEventArgs e)
         {
-            DownloadDataFromAPIServer();
-            //using (SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source))
-            //{
-            //    try
-            //    {                 
-            //        connection.Open();
-            //        try
-            //        {
-            //            using (SQLiteCommand command = new SQLiteCommand(connection))
-            //            {
-            //                using (var transaction = connection.BeginTransaction())
-            //                {                                
-            //                    DropTableIfExist(command, "DROP TABLE IF EXISTS " + _CurrentDatabase_CoordinatesTableName + ";");
-
-            //                    string headers = ", [postcode] text NOT NULL, [longitude] text NOT NULL, [latitude] text NOT NULL);";
-            //                    if (!CreateTable(command, _CurrentDatabase_CoordinatesTableName, headers))
-            //                    {
-            //                        MessageBox.Show("Couldn't create " + _CurrentDatabase_CoordinatesTableName + " table!", "Error!");
-            //                        connection.Close();
-            //                        SQLiteConnection.ClearAllPools();
-            //                        return;
-            //                    }
-                                
-            //                    //string headerSeries = "(postcode, longitude, latitude)";
-            //                    //if(InsertRowInTable(command, _CurrentDatabase_CoordinatesTableName, headerSeries, ))
-
-
-
-            //                    transaction.Commit();
-            //                }
-                            
-            //            }
-            //        }
-            //        catch (Exception error)
-            //        {
-            //            MessageBox.Show(error.Message);
-            //        }
-            //        connection.Close();
-            //        SQLiteConnection.ClearAllPools();
-            //    }
-            //    catch (Exception error)
-            //    {
-            //        MessageBox.Show(error.Message);
-            //    }
-            //}
-            
+            CreateNewCoordinateTable();
+            DownloadDataFromAPIServer();            
         }
         void DropTableIfExist(SQLiteCommand p_Command, string p_CommandText)
         {
@@ -173,12 +181,11 @@ namespace WPF_UI
             }
             return true;
         }
-
+        
         public async void DownloadDataFromAPIServer()
         {
             HttpClient client = new HttpClient();
-            List<DataFromPostcodeAPI> list = new List<DataFromPostcodeAPI>();
-
+          
             /* Setup Headers */
             _DataCoordinates.Columns.Add("postcode");
             _DataCoordinates.Columns.Add("longitude");
@@ -202,56 +209,63 @@ namespace WPF_UI
                     postcodes.Add(value);                                  
                 }
                 /* Process request for coordinates to API */
-                               
-                //int PostCodeIndex = 0;
-                //while(PostCodeIndex <= postcodes.Count)
-                //{
-                //    DataRow newRow = _DataCoordinates.NewRow();
-                //    string json = "{\"postcodes\":[";
-                //    for (int i = 0; i < 3; i++)
-                //    {
-                //        if(i == postcodes.Count)
-                //        {
-                //            break;
-                //        }
-                //        json += "\"" + postcodes[PostCodeIndex] + "\",";
-                //        PostCodeIndex++;
-                //    }
-                //    /* Remove last "," */
-                //    json = json.Remove(json.Length - 1);
-                //    json += "]}";
 
-                //    var response = await client.PostAsync("https://api.postcodes.io/postcodes", new StringContent(json, Encoding.UTF8, "application/json"));
-                  
-                   
-                //   // var e = await response.Content.ReadAsAsync<CoordinatesFromAPIObj2>();
-                //    //var coordinateOBJ = await response.Content.ReadAsStringAsync();
-                //}
-            
-                for (int i = 0; i < _Data.Rows.Count; i++)
-                {
-                    DataRow newRow = _DataCoordinates.NewRow();
-                   
-                    var response = await client.GetAsync("https://api.postcodes.io/postcodes/" + postcodes[i]);
-                    CoordinatesFromAPIObj coordinateOBJ = await response.Content.ReadAsAsync<CoordinatesFromAPIObj>();
-                    int status = coordinateOBJ.status;
+                int PostCodeIndex = 0;
+                while (PostCodeIndex < postcodes.Count)
+                {                   
+                    string json = "{\"postcodes\":[";
+                    // 100 is the max amount of postcodes that the API can handle
+                    for (int i = 0; i < 100; i++)
+                    {
+                        // Break if the total number of postcodes is < 100
+                        if (i == postcodes.Count)
+                        {
+                            break;
+                        }
+                        json += "\"" + postcodes[PostCodeIndex] + "\",";
+                        PostCodeIndex++;
+                    }
+                    /* Remove last "," */
+                    json = json.Remove(json.Length - 1);
+                    json += "]}";
+                    
+                    var response = await client.PostAsync("https://api.postcodes.io/postcodes", new StringContent(json, Encoding.UTF8, "application/json"));
+                    string responseObjectJson = await response.Content.ReadAsStringAsync();
+                    var settings = new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Ignore,
+                        MissingMemberHandling = MissingMemberHandling.Ignore
+                    };
+                    var responseObject = JsonConvert.DeserializeObject<ResponseObject>(responseObjectJson, settings);
+                    
+                    int status = responseObject.status;
                     if (status == 404)
-                    {                      
-                        newRow[0] = postcodes[i];
-                        newRow[1] = "";
-                        newRow[2] = "";
-                        _DataCoordinates.Rows.Add(newRow);
-                        continue;
-                    }                       
-                    newRow[0] = postcodes[i];
-                    newRow[1] = coordinateOBJ.result.longitude;
-                    newRow[2] = coordinateOBJ.result.latitude;
+                    {
+                        MessageBox.Show("Couldn't get the list of coordinates from API", "Error!");
+                        return;
+                    }
 
-                    _DataCoordinates.Rows.Add(newRow);
-                    DataGrid_Coordinates.DataContext = _DataCoordinates.DefaultView;
-                   
+                    /* Assign values to DataTable */
+                    for (int i = 0; i < responseObject.result.Length; i++)
+                    {
+                        DataRow newRow = _DataCoordinates.NewRow();
+                        newRow[0] = responseObject.result[i].query;
+                        if(responseObject.result[i].result == null)
+                        {
+                            newRow[1] = "";
+                            newRow[2] = "";
+                        }
+                        else
+                        {
+                            newRow[1] = responseObject.result[i].result.longitude;
+                            newRow[2] = responseObject.result[i].result.latitude;
+                        }                     
+                        _DataCoordinates.Rows.Add(newRow);
+                        DataGrid_Coordinates.DataContext = _DataCoordinates.DefaultView;
+                    }
+                    
                 }
-                MessageBox.Show(_DataCoordinates.Rows.Count.ToString());
+                MessageBox.Show("Coordinates downloaded", "SUCCESS");
             }
             catch (Exception error)
             {
