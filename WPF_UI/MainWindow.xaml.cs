@@ -727,12 +727,12 @@ namespace WPF_UI
         }
         private void ResetToDefault()
         {
-            TXT_Block_LoadingTime.Text = "";
+            TXT_Block_LoadingTime.Text = "Loading time: ";
             TXT_Box_EmailColumn.Text = "email";
             TXT_Box_NumberOfRecords.Text = "1";
             TXT_Box_CSV_Separator.Text = "\",\"";
             TXT_Box_Database_TableName.Text = "MyNewTable";
-            TXT_Box_CSV_NewDBName.Text = "MyNewDatabase";
+            TXT_Box_CSV_NewDBName.Text = "MyNewDatabase.db";
             BTN_Import.IsEnabled = false;
             BTN_DownloadData.IsEnabled = true;            
 
@@ -753,5 +753,6 @@ namespace WPF_UI
             SetActive(Panel_DirectorySelection, true);
         }
         #endregion Utility
+
     }
 }
