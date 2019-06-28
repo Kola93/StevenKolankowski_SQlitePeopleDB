@@ -88,57 +88,32 @@ namespace WPF_UI
                 ExecuteMostCommonEmailInUI();
             }            
         }
-        private void CreateNewCoordinateTable()
+        private void BTN_Import_Click(object sender, RoutedEventArgs e)
         {
-            using (SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source))
+            if (CB_Csv.IsChecked == true)
             {
-                try
+                if (CheckSeparatorFieldValidity() == true)
                 {
-                    connection.Open();
-                    try
-                    {
-                        using (SQLiteCommand command = new SQLiteCommand(connection))
-                        {
-                            using (var transaction = connection.BeginTransaction())
-                            {
-                                DropTableIfExist(command, "DROP TABLE IF EXISTS " + _CurrentDatabase_CoordinatesTableName + ";");
-
-                                string headers = ", [postcode] text NOT NULL, [longitude] text NOT NULL, [latitude] text NOT NULL);";
-                                if (!CreateTable(command, _CurrentDatabase_CoordinatesTableName, headers))
-                                {
-                                    MessageBox.Show("Couldn't create " + _CurrentDatabase_CoordinatesTableName + " table!", "Error!");
-                                    connection.Close();
-                                    SQLiteConnection.ClearAllPools();
-                                    return;
-                                }
-
-                                //string headerSeries = "(postcode, longitude, latitude)";
-                                //if(InsertRowInTable(command, _CurrentDatabase_CoordinatesTableName, headerSeries, ))
-
-
-
-                                transaction.Commit();
-                            }
-
-                        }
-                    }
-                    catch (Exception error)
-                    {
-                        MessageBox.Show(error.Message);
-                    }
-                    connection.Close();
-                    SQLiteConnection.ClearAllPools();
-                }
-                catch (Exception error)
-                {
-                    MessageBox.Show(error.Message);
+                    ReadDataFromFileCSV();
+                    CreateNewDatabaseAndTable();
+                    ShowProcessingDataTime();
                 }
             }
+            else if (CB_Database.IsChecked == true)
+            {
+                if (CheckDatabaseTableNameFieldValidity() == true)
+                {
+                    _CurrentDatabase_MainTableName = TXT_Box_Database_TableName.Text;
+                    ReadDataFromDatabase();
+                }
+            }
+            SetVisibility(Panel_MostCommonEmailAddresses, Visibility.Visible);
+            SetActive(Panel_DirectorySelection, false);
         }
         private void BTN_DownloadData_Click(object sender, RoutedEventArgs e)
         {
             CreateNewCoordinateTable();
-            DownloadDataFromAPIServer();            
+            CreateDataTable_CoordinatesAndDownloadAPIdata();            
         }
         void DropTableIfExist(SQLiteCommand p_Command, string p_CommandText)
         {
@@ -181,8 +156,37 @@ namespace WPF_UI
             }
             return true;
         }
-        
-        public async void DownloadDataFromAPIServer()
+        private void CreateNewCoordinateTable()
+        {           
+            try
+            {
+                SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source);
+                connection.Open();
+                SQLiteCommand command = new SQLiteCommand(connection);
+                var transaction = connection.BeginTransaction();
+
+                /* override existing table */
+                DropTableIfExist(command, "DROP TABLE IF EXISTS " + _CurrentDatabase_CoordinatesTableName + ";");
+
+                string headers = ", [postcode] text NOT NULL, [longitude] text NOT NULL, [latitude] text NOT NULL);";
+                if (!CreateTable(command, _CurrentDatabase_CoordinatesTableName, headers))
+                {
+                    MessageBox.Show("Couldn't create " + _CurrentDatabase_CoordinatesTableName + " table!", "Error!");
+                    transaction.Rollback();
+                    connection.Close();
+                    SQLiteConnection.ClearAllPools();
+                    return;
+                }
+                transaction.Commit();
+                connection.Close();
+                SQLiteConnection.ClearAllPools();
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.Message);
+            }
+        }
+        public async void CreateDataTable_CoordinatesAndDownloadAPIdata()
         {
             HttpClient client = new HttpClient();
           
@@ -193,10 +197,10 @@ namespace WPF_UI
             try
             {
                 List<string> postcodes = new List<string>();
+
+                /* Setup Database connection */
                 SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source);
-
                 connection.Open();
-
                 SQLiteCommand command = new SQLiteCommand(connection);
                 var transaction = connection.BeginTransaction();
 
@@ -208,8 +212,8 @@ namespace WPF_UI
                     string value = reader.GetString(0);
                     postcodes.Add(value);                                  
                 }
-                /* Process request for coordinates to API */
 
+                /* Process request for coordinates to API */
                 int PostCodeIndex = 0;
                 while (PostCodeIndex < postcodes.Count)
                 {                   
@@ -229,6 +233,7 @@ namespace WPF_UI
                     json = json.Remove(json.Length - 1);
                     json += "]}";
                     
+                    /* Call API with list of postcodes */
                     var response = await client.PostAsync("https://api.postcodes.io/postcodes", new StringContent(json, Encoding.UTF8, "application/json"));
                     string responseObjectJson = await response.Content.ReadAsStringAsync();
                     var settings = new JsonSerializerSettings
@@ -241,7 +246,7 @@ namespace WPF_UI
                     int status = responseObject.status;
                     if (status == 404)
                     {
-                        MessageBox.Show("Couldn't get the list of coordinates from API", "Error!");
+                        MessageBox.Show("Error 404: Couldn't get the list of coordinates from API", "Error!");
                         return;
                     }
 
@@ -262,13 +267,13 @@ namespace WPF_UI
                         }                     
                         _DataCoordinates.Rows.Add(newRow);
                         DataGrid_Coordinates.DataContext = _DataCoordinates.DefaultView;
-                    }
-                    
+                    }                    
                 }
+                transaction.Commit();
                 MessageBox.Show("Coordinates downloaded", "SUCCESS");
             }
             catch (Exception error)
-            {
+            {                
                 MessageBox.Show(error.ToString());
             }    
         }
@@ -313,6 +318,16 @@ namespace WPF_UI
                 MessageBox.Show("Insert Separator symbol", "Error!");
                 return false;
             }
+            if(TXT_Box_CSV_NewMainTableName.Text == string.Empty)
+            {
+                MessageBox.Show("Insert New Table Name!", "Error!");
+                return false;
+            }
+            if (TXT_Box_CSV_NewDBName.Text == string.Empty)
+            {
+                MessageBox.Show("Insert New Database name!", "Error!");
+                return false;
+            }
             return true;
         }
         private bool CheckDatabaseTableNameFieldValidity()
@@ -336,7 +351,8 @@ namespace WPF_UI
             TXT_Box_EmailColumn.Text = "email";
             TXT_Box_NumberOfRecords.Text = "1";
             TXT_Box_CSV_Separator.Text = "\",\"";
-            TXT_Box_Database_TableName.Text = "Table_1";
+            TXT_Box_Database_TableName.Text = "MyNewTable";
+            TXT_Box_CSV_NewDBName.Text = "MyNewDatabase";
 
             _Data = null;
             _Data = new DataTable();
@@ -348,6 +364,7 @@ namespace WPF_UI
             _ProcessingDataTime = new Stopwatch();
 
             SetVisibility(Panel_MostCommonEmailAddresses, Visibility.Hidden);
+            SetVisibility(Panel_LargestNumberOfPeopleLivingClose, Visibility.Hidden);
             SetActive(Panel_DirectorySelection, true);
         }
         private void SetActive(UIElement p_Element, bool p_Active)
@@ -383,142 +400,108 @@ namespace WPF_UI
                 TXT_Block_LoadingTime.Text = "Loading time: " + time.ToString() + "s";
             }
         }
-        private void BTN_Import_Click(object sender, RoutedEventArgs e)
-        {
-            if (CB_Csv.IsChecked == true)
-            {
-               if(CheckSeparatorFieldValidity() == true)
-                {
-                    ReadDataFromFileCSV();
-                    CreateNewDatabaseAndTable();
-                    ShowProcessingDataTime();
-                }               
-            }
-            else if (CB_Database.IsChecked == true)
-            {
-                if (CheckDatabaseTableNameFieldValidity() == true)
-                {
-                    _CurrentDatabase_MainTableName = TXT_Box_Database_TableName.Text;
-                    ReadDataFromDatabase();
-                }               
-            }
-            SetVisibility(Panel_MostCommonEmailAddresses, Visibility.Visible);
-            SetActive(Panel_DirectorySelection, false);
-        }
-
+      
         private void ReadDataFromDatabase()
-        {
-            using (SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source))
+        {       
+            try
             {
-                try
+                SQLiteConnection connection = new SQLiteConnection(_CurrentDatabase_Source);
+                connection.Open();
+                SQLiteCommand command = new SQLiteCommand(connection);
+                   
+                /* Setup SQLite Command */
+                command.CommandText = "SELECT * FROM " + _CurrentDatabase_MainTableName;
+                command.ExecuteNonQuery();
+                SQLiteDataReader reader = command.ExecuteReader();
+
+                /* Setup table name */
+                _Data.TableName = _CurrentDatabase_MainTableName;
+
+                /* Setup Headers */
+                for (int i = 1; i < reader.FieldCount; i++)
                 {
-                    connection.Open();
-                    using (SQLiteCommand command = new SQLiteCommand(connection))
-                    {
-                        try
-                        {
-                            /* Setup SQLite Command */
-                            command.CommandText = "SELECT * FROM " + _CurrentDatabase_MainTableName;
-                            command.ExecuteNonQuery();
-                            SQLiteDataReader reader = command.ExecuteReader();
-
-                            /* Setup table name */
-                            _Data.TableName = _CurrentDatabase_MainTableName;
-
-                            /* Setup Headers */
-                            for (int i = 1; i < reader.FieldCount; i++)
-                            {
-                                _Data.Columns.Add(reader.GetName(i));
-                            }
-
-                            /* Setup Rows */
-                            InsertRowsInDataTable(reader, ref _Data);
-
-                            /* Assign DataGrid Reference */
-                            dataGrid.DataContext = _Data.DefaultView;
-                            MessageBox.Show("Data Imported!", "SUCCESS!");
-                        }
-                        catch (Exception error)
-                        {
-                            MessageBox.Show(error.Message);
-                        }
-                    }
-                    connection.Close();
-                    SQLiteConnection.ClearAllPools();
+                    _Data.Columns.Add(reader.GetName(i));
                 }
-                catch (Exception error)
-                {
-                    MessageBox.Show(error.Message);
-                }
+
+                /* Setup Rows */
+                InsertRowsInDataTable(reader, ref _Data);
+
+                /* Assign DataGrid Reference */
+                dataGrid.DataContext = _Data.DefaultView;
+                MessageBox.Show("Data Imported!", "SUCCESS!");
+                                               
+                connection.Close();
+                SQLiteConnection.ClearAllPools();
             }
-            
+            catch (Exception error)
+            {
+                MessageBox.Show(error.Message);
+            }
         }
         private void CreateNewDatabaseAndTable()
         {
             _ProcessingDataTime.Start();
-            SQLiteConnection.CreateFile("MyDatabase2.db");
-            _CurrentDatabase_MainTableName = "Table_1";
-            using (SQLiteConnection conn = new SQLiteConnection("Data Source=MyDatabase2.db;Version=3;"))
+            SQLiteConnection.CreateFile(TXT_Box_CSV_NewDBName.Text);
+            _CurrentDatabase_Source = @"Data Source = " + TXT_Box_CSV_NewDBName.Text + "; version=3; ";
+            _CurrentDatabase_MainTableName = TXT_Box_CSV_NewMainTableName.Text;
+                        
+            try
             {
-                try
+                SQLiteConnection conn = new SQLiteConnection(_CurrentDatabase_Source);
+                conn.Open();
+                SQLiteCommand cmd = new SQLiteCommand(conn);
+                    
+                var transaction = conn.BeginTransaction();
+                        
+                /* Create table with values from imported .csv */
+                string headers = "";
+                for (int i = 0; i < _Data.Columns.Count; i++)
                 {
-                    conn.Open();
-                    using (SQLiteCommand cmd = new SQLiteCommand(conn))
+                    headers += ", [" + _Data.Columns[i].ColumnName + "] text NOT NULL";
+                }
+                headers += ");";
+
+                if(!CreateTable(cmd, _CurrentDatabase_MainTableName, headers))
+                {
+                    MessageBox.Show("Couldn't create table!", "Error!");
+                    return;
+                }
+
+                /* Setup headers */
+                string headerSeries = "";
+                for (int i = 0; i < _Data.Columns.Count; i++)
+                {
+                    headerSeries += _Data.Columns[i].ColumnName + ",";
+                }
+                headerSeries = headerSeries.Remove(headerSeries.Length - 1);
+
+                /* Setup rows */
+                for (int i = 0; i < _Data.Rows.Count; i++)
+                {
+                    string rowSeries = "";
+                    for (int j = 0; j < _Data.Rows[i].ItemArray.Length; j++)
                     {
-                        using (var transaction = conn.BeginTransaction())
-                        {
-                            /* Create table with values from imported .csv */
-                            string headers = "";
-                            for (int i = 0; i < _Data.Columns.Count; i++)
-                            {
-                                headers += ", [" + _Data.Columns[i].ColumnName + "] text NOT NULL";
-                            }
-                            headers += ");";
-
-                            if(!CreateTable(cmd, _CurrentDatabase_MainTableName, headers))
-                            {
-                                MessageBox.Show("Couldn't create table!", "Error!");
-                                return;
-                            }
-
-                            /* Setup headers */
-                            string headerSeries = "";
-                            for (int i = 0; i < _Data.Columns.Count; i++)
-                            {
-                                headerSeries += _Data.Columns[i].ColumnName + ",";
-                            }
-                            headerSeries = headerSeries.Remove(headerSeries.Length - 1);
-
-                            /* Setup rows */
-                            for (int i = 0; i < _Data.Rows.Count; i++)
-                            {
-                                string rowSeries = "";
-                                for (int j = 0; j < _Data.Rows[i].ItemArray.Length; j++)
-                                {
-                                    rowSeries += "'" + _Data.Rows[i].ItemArray.GetValue(j) + "'" + ",";
-                                }
-                                rowSeries = rowSeries.Remove(rowSeries.Length - 1);
-
-                                if(!InsertRowInTable(cmd, _CurrentDatabase_MainTableName, headerSeries, rowSeries))
-                                {
-                                    MessageBox.Show("Couln't insert row in Table!", "Error!");
-                                    return;
-                                }
-                            }
-                            transaction.Commit();
-                            _CurrentDatabase_Source = @"Data Source = " + "MyDatabase2.db" + "; version=3; ";
-                        }
+                        rowSeries += "'" + _Data.Rows[i].ItemArray.GetValue(j) + "'" + ",";
                     }
-                    _ProcessingDataTime.Stop();
-                    MessageBox.Show("Table Created!", "SUCCESS!");
-                    conn.Close();
-                    SQLiteConnection.ClearAllPools();
+                    rowSeries = rowSeries.Remove(rowSeries.Length - 1);
+
+                    if(!InsertRowInTable(cmd, _CurrentDatabase_MainTableName, headerSeries, rowSeries))
+                    {
+                        MessageBox.Show("Couln't insert row in Table!", "Error!");
+                        return;
+                    }
                 }
-                catch (Exception error)
-                {
-                    MessageBox.Show(error.Message);
-                }
+                transaction.Commit();        
+                _ProcessingDataTime.Stop();
+                MessageBox.Show("Table Created!", "SUCCESS!");
+                conn.Close();
+                SQLiteConnection.ClearAllPools();
             }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.Message);
+            }
+            
         }
 
         private bool InsertRowInTable(SQLiteCommand cmd, string p_TableName, string headerSeries, string rowSeries)
@@ -555,44 +538,46 @@ namespace WPF_UI
         {
             try
             {
-                using (StreamReader sr = new StreamReader(TXT_Box_CSV_Directory.Text))
+                StreamReader sr = new StreamReader(TXT_Box_CSV_Directory.Text);
+                
+                _ProcessingDataTime = Stopwatch.StartNew();
+                /* Setup Header */
+                string header = sr.ReadLine();
+                if (string.IsNullOrEmpty(header))
                 {
-                    _ProcessingDataTime = Stopwatch.StartNew();
-                    /* Setup Header */
-                    string header = sr.ReadLine();
-                    if (string.IsNullOrEmpty(header))
-                    {
-                        MessageBox.Show("No data in file");
-                        return;
-                    }
-                    string[] headerColumns = ParseLine(header);
-                    foreach (string headerColumn in headerColumns)
-                    {
-                        string cleanHeaderColumn = GetStringWithoutCharacterInBeginAndEnd(headerColumn, '"');
-                        _Data.Columns.Add(cleanHeaderColumn);
-                    }
-
-                    /* Process each line */
-                    while (!sr.EndOfStream)
-                    {
-                        string line = sr.ReadLine();
-                        if (string.IsNullOrEmpty(line))
-                        {
-                            continue;
-                        }
-                        DataRow importedRow = _Data.NewRow();
-                        string[] values = ParseLine(line);
-                        for (int i = 0; i < values.Count(); i++)
-                        {
-                            importedRow[i] = GetStringWithoutCharacterInBeginAndEnd(values[i], '"');
-                        }
-                        _Data.Rows.Add(importedRow);
-                    }
-                    TXT_Box_CSV_Directory.Text = string.Empty;
-                    _ProcessingDataTime.Stop();
-                    MessageBox.Show("Data loaded successfully!", "SUCCESS!");
-                    dataGrid.DataContext = _Data.DefaultView;
+                    MessageBox.Show("No data in file");
+                    return;
                 }
+                string[] headerColumns = ParseLine(header);
+                foreach (string headerColumn in headerColumns)
+                {
+                    string cleanHeaderColumn = GetStringWithoutCharacterInBeginAndEnd(headerColumn, '"');
+                    _Data.Columns.Add(cleanHeaderColumn);
+                }
+
+                /* Process each line */
+                while (!sr.EndOfStream)
+                {
+                    string line = sr.ReadLine();
+                    if (string.IsNullOrEmpty(line))
+                    {
+                        continue;
+                    }
+                    DataRow importedRow = _Data.NewRow();
+                    string[] values = ParseLine(line);
+                    for (int i = 0; i < values.Count(); i++)
+                    {
+                        importedRow[i] = GetStringWithoutCharacterInBeginAndEnd(values[i], '"');
+                    }
+                    _Data.Rows.Add(importedRow);
+                    dataGrid.DataContext = _Data.DefaultView;
+                    TXT_Block_NumberOfRecordsImported.Text = "Number of records: " + _Data.Rows.Count.ToString();
+                }
+                TXT_Box_CSV_Directory.Text = string.Empty;
+                _ProcessingDataTime.Stop();
+                MessageBox.Show("Data loaded successfully!", "SUCCESS!");
+               
+              
             }
             catch (Exception error)
             {
@@ -741,6 +726,5 @@ namespace WPF_UI
             //  TXT_Box_Database_Directory.Text = string.Empty;
         }
 
-       
     }
 }
