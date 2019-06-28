@@ -5,8 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPF_UI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="600" Width="1800
-        ">
+        Title="MainWindow" Height="600" Width="1800">
     <Grid>
         <Grid x:Name="Panel_DirectorySelection" Margin="0,0,987,354">
             <Button x:Name="BTN_CSV_Browse" Content="Browse" HorizontalAlignment="Left" Margin="710,56,0,0" VerticalAlignment="Top" Width="76" Click="BTN_CSV_Browse_Click"/>
@@ -30,11 +29,14 @@
             <TextBox x:Name="TXT_Box_NumberOfRecords" HorizontalAlignment="Left" Height="23" Margin="161,53,0,0" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="78"/>
             <TextBlock HorizontalAlignment="Left" Margin="0,53,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23"><Run Text="Insert "/><Run Text="number of records -&gt;"/></TextBlock>
         </Grid>
-        <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="840,30,0,0" VerticalAlignment="Top" Width="915"/>
+        <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="840,30,0,0" VerticalAlignment="Top" Width="660"/>
         <TextBlock HorizontalAlignment="Left" Margin="606,30,0,0" TextWrapping="Wrap" Text="Separator" VerticalAlignment="Top"/>
         <TextBox x:Name="TXT_Box_CSV_Separator" HorizontalAlignment="Left" Height="23" Margin="595,56,0,0" TextWrapping="Wrap" TextAlignment="Center" Text="&quot;,&quot;" VerticalAlignment="Top" Width="81" FontWeight="Bold"/>
         <Button x:Name="BTN_CSV_Browse_Copy" Content="Reset" HorizontalAlignment="Left" Margin="710,235,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Reset_Click" Background="#FFF59292"/>
-        
+        <Button x:Name="BTN_DownloadData" Content="Download" HorizontalAlignment="Left" Margin="595,235,0,0" VerticalAlignment="Top" Width="76" Click="BTN_DownloadData_Click" Background="#FFBBBBBB"/>
+        <TextBox x:Name="TXT_Box_PostcodeColumnName" HorizontalAlignment="Left" Height="23" Margin="595,287,0,0" TextWrapping="Wrap" Text="postal" VerticalAlignment="Top" Width="120"/>
+        <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Coordinates" HorizontalAlignment="Left" Height="315" Margin="1530,30,0,0" VerticalAlignment="Top" Width="220"/>
+
 
     </Grid>
 </Window>
