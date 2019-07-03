@@ -43,29 +43,34 @@
         <Grid x:Name="Panel_LargestNumberOfPeopleLivingClose" HorizontalAlignment="Left" Height="225" Margin="1110,33,0,0" VerticalAlignment="Top" Width="280" Background="#FFD6D6D6">
             <TextBlock HorizontalAlignment="Left" Margin="10,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="181" FontWeight="Bold" Text="Largest number of people leaving close to each other"/>
             <TextBlock HorizontalAlignment="Left" Margin="10,44,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="188" Height="23"><Run Text="Insert "/><Run Text="Postcode "/><Run Text="column "/><Run Text="name "/><Run Text="-&gt;"/></TextBlock>
-            <ListView x:Name="ListView_LargestNumberOfPeopleClose" HorizontalAlignment="Left" Height="91" Margin="10,103,0,0" VerticalAlignment="Top" Width="260"/>
-            <TextBox x:Name="TXT_Box_LargestNumberOfPeopleCloseNumberRecords" HorizontalAlignment="Left" Height="23" Margin="192,72,0,0" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="78"/>
+            <TextBox x:Name="TXT_Box_LargestNumberOfPeopleCloseNumberRecords" HorizontalAlignment="Left" Height="23" Margin="192,72,0,0" TextWrapping="Wrap" Text="3" VerticalAlignment="Top" Width="78"/>
             <TextBlock HorizontalAlignment="Left" Margin="10,72,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23"><Run Text="Insert "/><Run Text="number of records -&gt;"/></TextBlock>
             <Button x:Name="BTN_DownloadData" Content="Execute" HorizontalAlignment="Left" Margin="194,17,0,0" VerticalAlignment="Top" Width="76" Click="BTN_DownloadData_Click" Background="#FFCFCFCF"/>
             <TextBox x:Name="TXT_Box_PostcodeColumnName" HorizontalAlignment="Left" Height="23" Margin="192,44,0,0" TextWrapping="Wrap" Text="postal" VerticalAlignment="Top" Width="78"/>
+            <TextBox x:Name="TXT_Box_ClusteringRange" HorizontalAlignment="Left" Height="23" Margin="192,100,0,0" TextWrapping="Wrap" Text="150" VerticalAlignment="Top" Width="78"/>
+            <TextBlock HorizontalAlignment="Left" Margin="10,100,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23" Text="Insert clustering range (km)"/>
+            <TextBox x:Name="TXT_Box_MinAmountPointsPerCluster" HorizontalAlignment="Left" Height="23" Margin="192,128,0,0" TextWrapping="Wrap" Text="2" VerticalAlignment="Top" Width="78"/>
+            <TextBlock HorizontalAlignment="Left" Margin="10,128,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="35"><Run Text="Insert "/><Run Text="minimum amount of points per cluster"/></TextBlock>
 
         </Grid>
 
-        <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="65,295,0,0" VerticalAlignment="Top" Width="721"/>
+        <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="65,295,0,0" VerticalAlignment="Top" Width="525"/>
         <Button x:Name="BTN_Reset" Content="Reset" HorizontalAlignment="Left" Margin="1290,695,0,0" VerticalAlignment="Top" Width="100" Click="BTN_Reset_Click" Background="#FFF59292" Height="35" FontWeight="Bold" FontSize="16"/>
-        <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Coordinates" HorizontalAlignment="Left" Height="315" Margin="835,295,0,0" VerticalAlignment="Top" Width="220"/>
+        <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Coordinates" HorizontalAlignment="Left" Height="315" Margin="615,295,0,0" VerticalAlignment="Top" Width="190"/>
         <TextBlock HorizontalAlignment="Left" Margin="65,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="144"><Run Text="Main "/><Run Text="Data table view"/></TextBlock>
-        <TextBlock HorizontalAlignment="Left" Margin="835,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold"><Run Text="Coordinates Data Table view"/><LineBreak/><Run/></TextBlock>
-        <TextBlock x:Name="TXT_Block_NumberOfRecordsImported" HorizontalAlignment="Left" Margin="585,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="201" TextAlignment="Right"><Run Text="Number of records:"/></TextBlock>
-        <TextBlock x:Name="TXT_Block_LoadingTime" HorizontalAlignment="Left" Margin="354,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="216" Height="23" Text="Loading time: " TextAlignment="Right"/>
-        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="1250,305,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
+        <TextBlock HorizontalAlignment="Left" Margin="615,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="190"><Run Text="Coordinates Data Table view"/><LineBreak/><Run/></TextBlock>
+        <TextBlock x:Name="TXT_Block_NumberOfRecordsImported" HorizontalAlignment="Left" Margin="391,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="201" TextAlignment="Right"><Run Text="Number of records:"/></TextBlock>
+        <TextBlock x:Name="TXT_Block_LoadingTime" HorizontalAlignment="Left" Margin="160,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="216" Height="23" Text="Loading time: " TextAlignment="Right"/>
+        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="1315,270,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
 
 
         <Grid x:Name="Panel_OverlayStatus" Visibility="Hidden">
             <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="859" Margin="10,0,0,0" VerticalAlignment="Top" Width="1432" Background="#33000000"/>
             <TextBlock x:Name="TXT_Block_Status" HorizontalAlignment="Left" Margin="650,425,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="20" Background="#FFBFCDDB" Height="32" Width="175" TextAlignment="Center"><Run FontWeight="Bold" Text="Status:"/></TextBlock>
-            
+
         </Grid>
+        <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Result_PeopleGeoClose" HorizontalAlignment="Left" Height="315" Margin="835,295,0,0" VerticalAlignment="Top" Width="555"/>
+        <TextBlock HorizontalAlignment="Left" Margin="835,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="350"><Run Text="Largest number of people leaving close to each other"/><LineBreak/><Run Text=""/></TextBlock>
 
 
 

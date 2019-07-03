@@ -32,11 +32,16 @@ namespace WPF_UI
     {
         DataTable _Data;
         DataTable _DataCoordinates;
+        DataTable _DataPeopleGeoCloseResult;
         string _CurrentDatabase_Source;
         string _CurrentDatabase_MainTableName;
         string _CurrentDatabase_CoordinatesTableName;
         int _NumberOfEmailRecords;
-        Stopwatch _ProcessingDataTime;   
+        int _NumberOfPeopleGeoCloseRecords;
+        int _MinAmountOfPeoplePerCloster;
+        int _RangeBetweenEachLocation;
+        Stopwatch _ProcessingDataTime;
+        const int _HEARTHRADIUS = 6371; //Wikipedia
 
         public class ResponseObject
         {
@@ -62,14 +67,15 @@ namespace WPF_UI
         }
         struct Vector2d
         {
-            public double x;
-            public double y;
+            public double _X;
+            public double _Y;
         }
-        class Item
+        class Location
         {
-            public int clusterID;
-            public Vector2d location;
-            public PointLabel label;
+            public string _Postcode;
+            public int _ClusterID;
+            public Vector2d _Coordinates;
+            public PointLabel _Label;
         }
 
         public MainWindow()
@@ -82,6 +88,7 @@ namespace WPF_UI
 
             _Data = new DataTable();
             _DataCoordinates = new DataTable();
+            _DataPeopleGeoCloseResult = new DataTable();
             _ProcessingDataTime = new Stopwatch();
 
             //CB_Csv.IsChecked = true;
@@ -361,9 +368,9 @@ namespace WPF_UI
                 BTN_Reset.IsEnabled = true;
                 MessageBox.Show(error.ToString());
             }
-        }
+        }        
         #endregion Create
-        
+
         #region Read
         private void ReadDataFromDatabase()
         {
@@ -668,6 +675,46 @@ namespace WPF_UI
                 return false;
             }
             return true;
+        }        
+        private bool CheckPeopleGeoCloseFieldsValidity()
+        {
+            if (!int.TryParse(TXT_Box_LargestNumberOfPeopleCloseNumberRecords.Text, out _NumberOfPeopleGeoCloseRecords))
+            {
+                MessageBox.Show("You can only use numbers in records field!!", "Error!");
+                return false;
+            }
+
+            bool parsingResult_minAmount = int.TryParse(TXT_Box_MinAmountPointsPerCluster.Text, out _MinAmountOfPeoplePerCloster);
+            if (!parsingResult_minAmount)
+            {
+                MessageBox.Show("Insert valid number in field minimum amount of points per cluster!", "Error!");
+                return false;
+            }
+            if (parsingResult_minAmount)
+            {
+                if(_MinAmountOfPeoplePerCloster <= 1)
+                {
+                    MessageBox.Show("Insert number > 2 in field minimum amount of points per cluster!", "Error!");
+                    return false;
+                }               
+            }
+
+            bool parsingResult_Range = int.TryParse(TXT_Box_ClusteringRange.Text, out _RangeBetweenEachLocation);
+            if (!parsingResult_Range)
+            {
+                MessageBox.Show("Insert valid number in range!", "Error!");
+                return false;
+                
+            }
+            if (parsingResult_Range)
+            {
+                if (_RangeBetweenEachLocation <= 0)
+                {
+                    MessageBox.Show("Insert number > 0 in field range!", "Error!");
+                    return false;
+                }
+            }
+            return true;
         }
         private bool CheckDatabaseTableNameFieldValidity()
         {
@@ -753,7 +800,10 @@ namespace WPF_UI
             TXT_Box_Database_TableName.Text = "MyNewTable";
             TXT_Box_CSV_NewDBName.Text = "MyNewDatabase.db";
             BTN_Import.IsEnabled = false;
-            BTN_DownloadData.IsEnabled = true;            
+            BTN_DownloadData.IsEnabled = true;
+            TXT_Box_LargestNumberOfPeopleCloseNumberRecords.Text = "3";
+            TXT_Box_ClusteringRange.Text = "150";
+            TXT_Box_MinAmountPointsPerCluster.Text = "2";
 
             _Data = null;
             _Data = new DataTable();
@@ -785,83 +835,99 @@ namespace WPF_UI
         }
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
-            Task<bool> task = new Task<bool>(DBScanAlgorithm);
-            task.Start();
-            ShowOverlayMessage("Calculating...");
-
-            bool DBScanAlgorithmResult = await task;
-            if (!DBScanAlgorithmResult)
+            if(CheckPeopleGeoCloseFieldsValidity() == true)
             {
-                MessageBox.Show("Failed!", "Error");
-            }
-            HideOverlayMessage();
-        }
+                Task<bool> Task_DBScanAlgorithm = new Task<bool>(DBScanAlgorithm);
+                Task_DBScanAlgorithm.Start();
+                ShowOverlayMessage("Calculating...");
 
+                bool DBScanAlgorithmResult = await Task_DBScanAlgorithm;
+                if (DBScanAlgorithmResult == false)
+                {
+                    MessageBox.Show("DBScan Algorithm failed!", "Error");
+                    HideOverlayMessage();
+                    return;
+                }
+               
+                HideOverlayMessage();
+            }            
+        }
+    
+        private Vector2d ConvertGeoCoordinatesToCartesian(float p_Longitude, float p_Latitude)
+        {
+            Vector2d result;
+            result._X = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Cos(p_Longitude);
+            result._Y = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Sin(p_Longitude);
+            return result;
+        }
         private bool DBScanAlgorithm()
         {
             try
             {
                 Dispatcher.Invoke(() =>
                 {
-                    ListView_LargestNumberOfPeopleClose.Items.Clear();
+                    DataGrid_Result_PeopleGeoClose.DataContext = null;
                 });
-                
-                Random xRandomDouble = new Random();
-                List<Item> items = new List<Item>();
-                for (int i = 0; i < 5000; i++)
-                {
-                    Item xitem = new Item();
-                    xitem.clusterID = 0;
 
-                    xitem.location.x = GetRandomDouble(ref xRandomDouble, 0, 5000);
-                    xitem.location.y = GetRandomDouble(ref xRandomDouble, 0, 5000);
-                    xitem.label = PointLabel.NOT_PROCESSED;
-                    items.Add(xitem);
+                /* Setup coordinate list */
+                List<Location> Locations = new List<Location>();
+                for (int i = 0; i < _DataCoordinates.Rows.Count; i++)
+                {
+                    float longitude;
+                    float latitude;
+                    bool LongitudeResult = float.TryParse(_DataCoordinates.Rows[i]["longitude"].ToString(), out longitude);
+                    bool LatitudeResult = float.TryParse(_DataCoordinates.Rows[i]["latitude"].ToString(), out latitude);
+                    if (LongitudeResult && LatitudeResult)
+                    {
+                        Location xitem = new Location();
+                        xitem._ClusterID = 0;
+                        xitem._Postcode = _DataCoordinates.Rows[i]["postcode"].ToString();
+                        xitem._Coordinates = ConvertGeoCoordinatesToCartesian(longitude, latitude);
+                        xitem._Label = PointLabel.NOT_PROCESSED;
+                        Locations.Add(xitem);
+                    }
                 }
+                int closterIndex = 0;
 
-                int minNumberOfPointsPerCloster = 5;
-                int range = 50;
-
-                int closterCounter = 0;
-
-                List<List<Item>> results = new List<List<Item>>();
+                List<List<Location>> results = new List<List<Location>>();
                 Stopwatch timer = Stopwatch.StartNew();
-                foreach (Item item in items)
+
+                /* Algorithm */
+                foreach (Location location in Locations)
                 {
-                    if (item.label != PointLabel.NOT_PROCESSED)
+                    if (location._Label != PointLabel.NOT_PROCESSED)
                     {
                         continue;
                     }
 
-                    var neighbors = GetNeighbors(items, item, range);
+                    var neighbors = GetNeighbors(Locations, location, _RangeBetweenEachLocation);
 
-                    if (neighbors.Count < minNumberOfPointsPerCloster)
+                    if (neighbors.Count < _MinAmountOfPeoplePerCloster)
                     {
-                        item.label = PointLabel.NOISE;
+                        location._Label = PointLabel.NOISE;
                         continue;
                     }
-                    neighbors.Remove(item);
+                    neighbors.Remove(location);
                     var seeds = neighbors;
 
-                    closterCounter++;
-                    item.clusterID = closterCounter;
+                    closterIndex++;
+                    location._ClusterID = closterIndex;
 
-                    List<Item> clusterItems = new List<Item>();
-                    clusterItems.Add(item);
+                    List<Location> clusterItems = new List<Location>(); ;
 
                     for (int i = 0; i < seeds.Count; i++)
                     {
-                        if (seeds[i].label == PointLabel.NOISE || seeds[i].label != PointLabel.NOT_PROCESSED)
+                        if (seeds[i]._Label == PointLabel.NOISE || seeds[i]._Label != PointLabel.NOT_PROCESSED)
                         {
                             continue;
                         }
-                        seeds[i].label = PointLabel.CLUSTER;
-                        seeds[i].clusterID = closterCounter;
+                        seeds[i]._Label = PointLabel.CLUSTER;
+                        seeds[i]._ClusterID = closterIndex;
                         clusterItems.Add(seeds[i]);
 
-                        var seedNeighbors = GetNeighbors(items, seeds[i], range);
+                        var seedNeighbors = GetNeighbors(Locations, seeds[i], _RangeBetweenEachLocation);
 
-                        if (seedNeighbors.Count >= minNumberOfPointsPerCloster)
+                        if (seedNeighbors.Count >= _MinAmountOfPeoplePerCloster)
                         {
                             foreach (var seedNeighbor in seedNeighbors)
                             {
@@ -869,57 +935,108 @@ namespace WPF_UI
                             }
                         }
                     }
-                    if (clusterItems.Count >= minNumberOfPointsPerCloster)
+                    /* Add closter quantity to list */
+                    if (clusterItems.Count >= _MinAmountOfPeoplePerCloster)
                     {
                         results.Add(clusterItems);
                     }
                 }
-
-                timer.Stop();
-                Dispatcher.Invoke(() =>
+                if (ElaborateGroupingResultsAndDisplay(results))
                 {
-                    ListView_LargestNumberOfPeopleClose.Items.Add(timer.ElapsedMilliseconds / 1000);
-                });
-
-                for (int i = 0; i < results.Count; i++)
-                {
-                    string line = "#" + results[i].Count + " ";
-                    for (int j = 0; j < results[i].Count; j++)
-                    {
-                        line += "ID " + results[i][j].clusterID.ToString() + " x:" + results[i][j].location.x.ToString() + " y:" + results[i][j].location.y.ToString();
-                    }
-                    Dispatcher.Invoke(() =>
-                    {
-                        ListView_LargestNumberOfPeopleClose.Items.Add(line);
-                    });
-
+                    return true;
                 }
+                return false;
+                //timer.Stop();
+
             }
             catch (Exception error)
             {
                 MessageBox.Show(error.ToString(), "Error!");
                 return false;
             }
+        }
 
-            return true;
+        private bool ElaborateGroupingResultsAndDisplay(List<List<Location>> results)
+        {
+            try
+            {
+                _DataPeopleGeoCloseResult = null;
+                _DataPeopleGeoCloseResult = new DataTable();
+                /* Setup Headers */
+                _DataPeopleGeoCloseResult.Columns.Add("Cluster ID");
+                _DataPeopleGeoCloseResult.Columns.Add("x");
+                _DataPeopleGeoCloseResult.Columns.Add("y");
+                for (int i = 0; i < _Data.Columns.Count; i++)
+                {
+                    _DataPeopleGeoCloseResult.Columns.Add(_Data.Columns[i].ColumnName);
+                }
+
+                int iteration = _NumberOfPeopleGeoCloseRecords;
+                var ReorderedResultList = results.OrderByDescending(x => x.Count).ToList();
+                /* Iterate through each cluster group */
+                foreach (var Results in ReorderedResultList)
+                {
+                    iteration--;
+                    if (iteration < 0)
+                    {
+                        break;
+                    }
+                    /* Iterate through each location in cluster */
+                    foreach (var Location in Results)
+                    {
+                        DataRow NewRow = _DataPeopleGeoCloseResult.NewRow();
+                        DataRow RowFromMainDB = null;
+                        foreach (DataRow row in _Data.Rows)
+                        {
+                            var postcode = row.Field<string>("postal");
+                            if (postcode == Location._Postcode)
+                            {
+                                RowFromMainDB = row;
+                                break;
+                            }
+                        }
+
+                        if (RowFromMainDB != null)
+                        {
+                            NewRow[0] = Location._ClusterID;
+                            NewRow[1] = Location._Coordinates._X;
+                            NewRow[2] = Location._Coordinates._Y;
+                            for (int i = 0; i < RowFromMainDB.ItemArray.Length; i++)
+                            {
+                                NewRow[i + 3] = RowFromMainDB.ItemArray[i];
+                            }
+                            _DataPeopleGeoCloseResult.Rows.Add(NewRow);
+                        }
+                    }
+
+                    DataRow EmptyRow = _DataPeopleGeoCloseResult.NewRow();
+                    _DataPeopleGeoCloseResult.Rows.Add(EmptyRow);
+
+                }
+                Dispatcher.Invoke(() =>
+                {
+                    DataGrid_Result_PeopleGeoClose.DataContext = _DataPeopleGeoCloseResult.DefaultView;
+                });
+                return true;
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString(), "Error!");
+                return false;
+            }
         }
 
         private double GetDistance(Vector2d p_location1, Vector2d p_location2)
         {
-            return Math.Sqrt(Math.Pow((p_location2.x - p_location1.x), 2) + Math.Pow((p_location2.y - p_location1.y), 2));
+            return Math.Sqrt(Math.Pow((p_location2._X - p_location1._X), 2) + Math.Pow((p_location2._Y - p_location1._Y), 2));
         }
 
-        private double GetRandomDouble(ref Random random, double min, double max)
+        private List<Location> GetNeighbors(List<Location> DB, Location checkingPoint, int range)
         {
-            return random.NextDouble() * (max - min) + min;
-        }
-
-        private List<Item> GetNeighbors(List<Item> DB, Item checkingPoint, int range)
-        {
-            List<Item> neighbors = new List<Item>();
-            foreach (Item point in DB)
+            List<Location> neighbors = new List<Location>();
+            foreach (Location point in DB)
             {
-                double Distance = GetDistance(point.location, checkingPoint.location);
+                double Distance = GetDistance(point._Coordinates, checkingPoint._Coordinates);
                 if (Distance <= range)
                 {
                     neighbors.Add(point);
@@ -928,4 +1045,5 @@ namespace WPF_UI
             return neighbors;
         }
     }
+   
 }
