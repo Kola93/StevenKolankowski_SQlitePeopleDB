@@ -57,7 +57,7 @@
         <DataGrid ItemsSource="{Binding}" x:Name="dataGrid" HorizontalAlignment="Left" Height="315" Margin="65,295,0,0" VerticalAlignment="Top" Width="525"/>
         <Button x:Name="BTN_Reset" Content="Reset" HorizontalAlignment="Left" Margin="1290,695,0,0" VerticalAlignment="Top" Width="100" Click="BTN_Reset_Click" Background="#FFF59292" Height="35" FontWeight="Bold" FontSize="16"/>
         <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Coordinates" HorizontalAlignment="Left" Height="315" Margin="615,295,0,0" VerticalAlignment="Top" Width="190"/>
-        <TextBlock HorizontalAlignment="Left" Margin="65,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="144"><Run Text="Main "/><Run Text="Data table view"/></TextBlock>
+        <TextBlock HorizontalAlignment="Left" Margin="65,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="170"><Run Text="Imported"/><Run Text=" "/><Run Text="Data table view"/></TextBlock>
         <TextBlock HorizontalAlignment="Left" Margin="615,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="190"><Run Text="Coordinates Data Table view"/><LineBreak/><Run/></TextBlock>
         <TextBlock x:Name="TXT_Block_NumberOfRecordsImported" HorizontalAlignment="Left" Margin="391,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="201" TextAlignment="Right"><Run Text="Number of records:"/></TextBlock>
         <TextBlock x:Name="TXT_Block_LoadingTime" HorizontalAlignment="Left" Margin="160,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="216" Height="23" Text="Loading time: " TextAlignment="Right"/>
@@ -65,9 +65,9 @@
 
 
         <Grid x:Name="Panel_OverlayStatus" Visibility="Hidden">
-            <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="859" Margin="10,0,0,0" VerticalAlignment="Top" Width="1432" Background="#33000000"/>
+            <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="859" Margin="10,0,0,0" VerticalAlignment="Top" Width="1432" Background="#66000000"/>
             <TextBlock x:Name="TXT_Block_Status" HorizontalAlignment="Left" Margin="650,425,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="20" Background="#FFBFCDDB" Height="32" Width="175" TextAlignment="Center"><Run FontWeight="Bold" Text="Status:"/></TextBlock>
-
+          
         </Grid>
         <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Result_PeopleGeoClose" HorizontalAlignment="Left" Height="315" Margin="835,295,0,0" VerticalAlignment="Top" Width="555"/>
         <TextBlock HorizontalAlignment="Left" Margin="835,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="350"><Run Text="Largest number of people leaving close to each other"/><LineBreak/><Run Text=""/></TextBlock>
