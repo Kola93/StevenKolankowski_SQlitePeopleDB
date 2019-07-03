@@ -118,11 +118,11 @@ namespace WPF_UI
         }
         private async void BTN_Import_Click(object sender, RoutedEventArgs e)
         {
+            ShowOverlayMessage("Importing...");
             if (CB_Csv.IsChecked == true)
             {
                 if (CheckImportFieldsValidityAndSetupValues() == true)
                 {
-                   ShowOverlayMessage("Importing...");
                     Task<bool> Task_ReadFromCSV = new Task<bool>(ReadDataFromFileCSV);                     
                     Task_ReadFromCSV.Start();
                     bool Result_Task_ReadFromCSV = await Task_ReadFromCSV;
@@ -132,7 +132,7 @@ namespace WPF_UI
                         HideOverlayMessage();
                         return;
                     }                    
-                    dataGrid.DataContext = _Data.DefaultView;
+                    //dataGrid.DataContext = _Data.DefaultView;
                     TXT_Block_NumberOfRecordsImported.Text = _Data.Rows.Count.ToString();
                    
                     Task<bool> Task_CreateNewDBandTable = new Task<bool>(CreateNewDatabaseAndTable);
@@ -144,18 +144,26 @@ namespace WPF_UI
                         HideOverlayMessage();
                         return;
                     }
-                    HideOverlayMessage();
                     ShowProcessingDataTime();
                 }
             }
             else if (CB_Database.IsChecked == true)
             {
-                if (CheckDatabaseTableNameFieldValidity() == true)
+                if (CheckDatabaseTableNameFieldValidityAndSetupValues() == true)
                 {
-                    _CurrentDatabase_MainTableName = TXT_Box_Database_TableName.Text;
-                    ReadDataFromDatabase();
+                    Task<bool> Task_ReadFromExistingDB = new Task<bool>(ReadDataFromExistingDB);
+                    Task_ReadFromExistingDB.Start();
+                    bool Result_Task_eadFromExistingDB = await Task_ReadFromExistingDB;
+                    if (!Result_Task_eadFromExistingDB)
+                    {
+                        MessageBox.Show("Could not create read data from existing DB!", "Error!");
+                        HideOverlayMessage();
+                        return;
+                    }
                 }
             }
+            dataGrid.DataContext = _Data.DefaultView;
+            HideOverlayMessage();
             SetVisibility(Panel_MostCommonEmailAddresses, Visibility.Visible);
             SetVisibility(Panel_LargestNumberOfPeopleLivingClose, Visibility.Visible);
             SetActive(Panel_DirectorySelection, false);
@@ -396,7 +404,7 @@ namespace WPF_UI
         #endregion Create
 
         #region Read
-        private void ReadDataFromDatabase()
+        private bool ReadDataFromExistingDB()
         {
             try
             {
@@ -421,16 +429,14 @@ namespace WPF_UI
                 /* Setup Rows */
                 InsertRowsInDataTable(reader, ref _Data);
 
-                /* Assign DataGrid Reference */
-                dataGrid.DataContext = _Data.DefaultView;
-                MessageBox.Show("Data Imported!", "SUCCESS!");
-
-                //connection.Close();
+                connection.Close();
                 SQLiteConnection.ClearAllPools();
+                return true;
             }
             catch (Exception error)
             {
                 MessageBox.Show(error.Message);
+                return false;
             }
         }
         private bool ReadDataFromFileCSV()
@@ -757,13 +763,14 @@ namespace WPF_UI
             }
             return true;
         }
-        private bool CheckDatabaseTableNameFieldValidity()
+        private bool CheckDatabaseTableNameFieldValidityAndSetupValues()
         {
             if (TXT_Box_Database_TableName.Text == string.Empty)
             {
                 MessageBox.Show("Insert Table Name", "Error!");
                 return false;
             }
+            _CurrentDatabase_MainTableName = TXT_Box_Database_TableName.Text;
             return true;
         }
         private SQLiteDataReader GetColumnReader_SQLiteCommand(SQLiteCommand command, string p_database, string p_column)
