@@ -12,15 +12,15 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using Microsoft.Win32; // Includes OpenFileDialog
-using System.IO; // Includes StreamReader
-using System.Data; // includes DataTable
-using System.Data.SQLite; // includes SQLite
+using Microsoft.Win32; // OpenFileDialog
+using System.IO; // StreamReader
+using System.Data; // DataTable
+using System.Data.SQLite; //  SQLite
 using System.Data.SqlClient;
 using SqliteWrapper;
 using Microsoft.CSharp;
 using System.Net.Http;
-using Newtonsoft.Json;
+using Newtonsoft.Json; // Serialization
 using System.Diagnostics; // Timer
 
 namespace WPF_UI
@@ -47,12 +47,31 @@ namespace WPF_UI
         {
             public string query;
             public ResultData result;
-        }        public class ResultData
+        }
+        public class ResultData
         {
             public string postcode;
             public float longitude;
             public float latitude;
         }
+        enum PointLabel
+        {
+            NOT_PROCESSED,
+            NOISE,
+            CLUSTER
+        }
+        struct Vector2d
+        {
+            public double x;
+            public double y;
+        }
+        class Item
+        {
+            public int clusterID;
+            public Vector2d location;
+            public PointLabel label;
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -754,5 +773,159 @@ namespace WPF_UI
         }
         #endregion Utility
 
+
+        private void ShowOverlayMessage(string p_Message)
+        {
+            SetVisibility(Panel_OverlayStatus, Visibility.Visible);
+            TXT_Block_Status.Text = p_Message;
+        }
+        private void HideOverlayMessage()
+        {
+            SetVisibility(Panel_OverlayStatus, Visibility.Hidden);
+        }
+        private async void Button_Click(object sender, RoutedEventArgs e)
+        {
+            Task<bool> task = new Task<bool>(DBScanAlgorithm);
+            task.Start();
+            ShowOverlayMessage("Calculating...");
+
+            bool DBScanAlgorithmResult = await task;
+            if (!DBScanAlgorithmResult)
+            {
+                MessageBox.Show("Failed!", "Error");
+            }
+            HideOverlayMessage();
+        }
+
+        private bool DBScanAlgorithm()
+        {
+            try
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    ListView_LargestNumberOfPeopleClose.Items.Clear();
+                });
+                
+                Random xRandomDouble = new Random();
+                List<Item> items = new List<Item>();
+                for (int i = 0; i < 5000; i++)
+                {
+                    Item xitem = new Item();
+                    xitem.clusterID = 0;
+
+                    xitem.location.x = GetRandomDouble(ref xRandomDouble, 0, 5000);
+                    xitem.location.y = GetRandomDouble(ref xRandomDouble, 0, 5000);
+                    xitem.label = PointLabel.NOT_PROCESSED;
+                    items.Add(xitem);
+                }
+
+                int minNumberOfPointsPerCloster = 5;
+                int range = 50;
+
+                int closterCounter = 0;
+
+                List<List<Item>> results = new List<List<Item>>();
+                Stopwatch timer = Stopwatch.StartNew();
+                foreach (Item item in items)
+                {
+                    if (item.label != PointLabel.NOT_PROCESSED)
+                    {
+                        continue;
+                    }
+
+                    var neighbors = GetNeighbors(items, item, range);
+
+                    if (neighbors.Count < minNumberOfPointsPerCloster)
+                    {
+                        item.label = PointLabel.NOISE;
+                        continue;
+                    }
+                    neighbors.Remove(item);
+                    var seeds = neighbors;
+
+                    closterCounter++;
+                    item.clusterID = closterCounter;
+
+                    List<Item> clusterItems = new List<Item>();
+                    clusterItems.Add(item);
+
+                    for (int i = 0; i < seeds.Count; i++)
+                    {
+                        if (seeds[i].label == PointLabel.NOISE || seeds[i].label != PointLabel.NOT_PROCESSED)
+                        {
+                            continue;
+                        }
+                        seeds[i].label = PointLabel.CLUSTER;
+                        seeds[i].clusterID = closterCounter;
+                        clusterItems.Add(seeds[i]);
+
+                        var seedNeighbors = GetNeighbors(items, seeds[i], range);
+
+                        if (seedNeighbors.Count >= minNumberOfPointsPerCloster)
+                        {
+                            foreach (var seedNeighbor in seedNeighbors)
+                            {
+                                seeds.Add(seedNeighbor);
+                            }
+                        }
+                    }
+                    if (clusterItems.Count >= minNumberOfPointsPerCloster)
+                    {
+                        results.Add(clusterItems);
+                    }
+                }
+
+                timer.Stop();
+                Dispatcher.Invoke(() =>
+                {
+                    ListView_LargestNumberOfPeopleClose.Items.Add(timer.ElapsedMilliseconds / 1000);
+                });
+
+                for (int i = 0; i < results.Count; i++)
+                {
+                    string line = "#" + results[i].Count + " ";
+                    for (int j = 0; j < results[i].Count; j++)
+                    {
+                        line += "ID " + results[i][j].clusterID.ToString() + " x:" + results[i][j].location.x.ToString() + " y:" + results[i][j].location.y.ToString();
+                    }
+                    Dispatcher.Invoke(() =>
+                    {
+                        ListView_LargestNumberOfPeopleClose.Items.Add(line);
+                    });
+
+                }
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString(), "Error!");
+                return false;
+            }
+
+            return true;
+        }
+
+        private double GetDistance(Vector2d p_location1, Vector2d p_location2)
+        {
+            return Math.Sqrt(Math.Pow((p_location2.x - p_location1.x), 2) + Math.Pow((p_location2.y - p_location1.y), 2));
+        }
+
+        private double GetRandomDouble(ref Random random, double min, double max)
+        {
+            return random.NextDouble() * (max - min) + min;
+        }
+
+        private List<Item> GetNeighbors(List<Item> DB, Item checkingPoint, int range)
+        {
+            List<Item> neighbors = new List<Item>();
+            foreach (Item point in DB)
+            {
+                double Distance = GetDistance(point.location, checkingPoint.location);
+                if (Distance <= range)
+                {
+                    neighbors.Add(point);
+                }
+            }
+            return neighbors;
+        }
     }
 }

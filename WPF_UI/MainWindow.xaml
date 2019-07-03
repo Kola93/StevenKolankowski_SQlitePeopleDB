@@ -58,6 +58,18 @@
         <TextBlock HorizontalAlignment="Left" Margin="835,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold"><Run Text="Coordinates Data Table view"/><LineBreak/><Run/></TextBlock>
         <TextBlock x:Name="TXT_Block_NumberOfRecordsImported" HorizontalAlignment="Left" Margin="585,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="201" TextAlignment="Right"><Run Text="Number of records:"/></TextBlock>
         <TextBlock x:Name="TXT_Block_LoadingTime" HorizontalAlignment="Left" Margin="354,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="216" Height="23" Text="Loading time: " TextAlignment="Right"/>
+        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="1250,305,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
+
+
+        <Grid x:Name="Panel_OverlayStatus" Visibility="Hidden">
+            <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="859" Margin="10,0,0,0" VerticalAlignment="Top" Width="1432" Background="#33000000"/>
+            <TextBlock x:Name="TXT_Block_Status" HorizontalAlignment="Left" Margin="650,425,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="20" Background="#FFBFCDDB" Height="32" Width="175" TextAlignment="Center"><Run FontWeight="Bold" Text="Status:"/></TextBlock>
+            
+        </Grid>
+
+
+
+
     </Grid>
 
 </Window>
