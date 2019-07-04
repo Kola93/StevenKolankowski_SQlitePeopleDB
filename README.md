@@ -1,3 +1,3 @@
 # StevenKolankowski_SQlitePeopleDB
 
-![Alt Tag](.../master/Documentation/Interface.PNG)
+![Alt text](relative/path/to/img.png?raw=true "Interface")
