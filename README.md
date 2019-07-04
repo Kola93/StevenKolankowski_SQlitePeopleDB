@@ -50,3 +50,6 @@
 - The data will be displayed as follows
 
 ![](Documentation/DataView_PeopleGeoClose.PNG)
+
+# Copyright
+All licenses in this repository are copyrighted by their respective authors. See License.mb for details.
