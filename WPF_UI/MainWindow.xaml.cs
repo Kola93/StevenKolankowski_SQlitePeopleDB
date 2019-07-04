@@ -203,7 +203,7 @@ namespace WPF_UI
                         return;
                     }                    
                     //dataGrid.DataContext = _Data.DefaultView;
-                    TXT_Block_NumberOfRecordsImported.Text = _Data.Rows.Count.ToString();
+                    TXT_Block_NumberOfRecordsImported.Text = "Number of Records: " + _Data.Rows.Count.ToString();
                    
                     Task<bool> Task_CreateNewDBandTable = new Task<bool>(CreateNewSQLiteDatabaseAndTableFromMainDataTable);
                     Task_CreateNewDBandTable.Start();                    
