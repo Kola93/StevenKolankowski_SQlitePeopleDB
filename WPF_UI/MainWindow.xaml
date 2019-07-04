@@ -9,16 +9,16 @@
     <Grid>
         <Grid x:Name="Panel_DirectorySelection" Margin="45,20,637,611" Background="#FFE0E0E0">
 
-            <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="665,204,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click" IsEnabled="False" Background="#FF5ADC4D"/>
+            <Button x:Name="BTN_Import" Content="Import" HorizontalAlignment="Left" Margin="665,204,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Import_Click" IsEnabled="False" Background="#FF5ADC4D" FontWeight="Bold"/>
             <Grid HorizontalAlignment="Left" Height="73" Margin="0,115,0,0" VerticalAlignment="Top" Width="750">
-                <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="40,40,0,0" TextWrapping="Wrap" Text="C:\Users\Kola-Desktop\Documents\Jobs\Fatshark\StevenKolankowski_Test\WPF_UI\bin\Debug\MyDatabase2.db" VerticalAlignment="Top" Width="484" IsReadOnly="True" TextOptions.TextHintingMode="Fixed" FontSize="9"/>
-                <Button x:Name="BTN_Database_Browse" Content="Browse" HorizontalAlignment="Left" Margin="664,43,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Database_Browse_Click" IsEnabled="False"/>
+                <TextBox x:Name="TXT_Box_Database_Directory" HorizontalAlignment="Left" Height="23" Margin="40,40,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="484" IsReadOnly="True" TextOptions.TextHintingMode="Fixed" FontSize="9"/>
+                <Button x:Name="BTN_Database_Browse" Content="Browse" HorizontalAlignment="Left" Margin="664,43,0,0" VerticalAlignment="Top" Width="76" Click="BTN_Database_Browse_Click" IsEnabled="False" FontWeight="Bold"/>
                 <TextBlock HorizontalAlignment="Left" Margin="560,15,0,0" TextWrapping="Wrap" Text="Table Name" VerticalAlignment="Top"/>
                 <TextBox x:Name="TXT_Box_Database_TableName" HorizontalAlignment="Left" Height="23" Margin="549,40,0,0" TextWrapping="Wrap" Text="Table_1" VerticalAlignment="Top" Width="81" IsEnabled="False" FontWeight="Bold"/>
                 <CheckBox x:Name="CB_Database" Content="Use existing database" HorizontalAlignment="Left" Margin="20,16,0,0" VerticalAlignment="Top" Checked="CB_Database_Checked"/>
             </Grid>
             <Grid HorizontalAlignment="Left" Height="90" Margin="0,10,0,0" VerticalAlignment="Top" Width="750">
-                <Button x:Name="BTN_CSV_Browse" Content="Browse" HorizontalAlignment="Left" Margin="664,25,0,0" VerticalAlignment="Top" Width="76" Click="BTN_CSV_Browse_Click"/>
+                <Button x:Name="BTN_CSV_Browse" Content="Browse" HorizontalAlignment="Left" Margin="664,25,0,0" VerticalAlignment="Top" Width="76" Click="BTN_CSV_Browse_Click" FontWeight="Bold"/>
                 <TextBox x:Name="TXT_Box_CSV_Directory" HorizontalAlignment="Left" Height="23" Margin="40,25,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="484" IsReadOnly="True" FontSize="9"/>
                 <TextBlock HorizontalAlignment="Left" Margin="564,1,0,0" TextWrapping="Wrap" Text="Separator" VerticalAlignment="Top"/>
                 <TextBox x:Name="TXT_Box_CSV_Separator" HorizontalAlignment="Left" Height="23" Margin="549,25,0,0" TextWrapping="Wrap" TextAlignment="Center" Text="&quot;,&quot;" VerticalAlignment="Top" Width="81" FontWeight="Bold"/>
@@ -35,22 +35,33 @@
             <TextBlock HorizontalAlignment="Left" Margin="10,14,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="215" FontWeight="Bold" Text="Most common email addresses"/>
             <TextBox x:Name="TXT_Box_EmailColumn" HorizontalAlignment="Left" Height="23" Margin="171,39,0,0" TextWrapping="Wrap" Text="email" VerticalAlignment="Top" Width="78"/>
             <TextBlock HorizontalAlignment="Left" Margin="10,39,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23" Text="Insert Email column name -&gt;"/>
-            <Button x:Name="BTN_ProcessMostCommonEmailAddresses" Content="Execute" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="53" Margin="196,12,0,0" Click="BTN_ProcessMostCommonEmailAddresses_Click"/>
+            <Button x:Name="BTN_ProcessMostCommonEmailAddresses" Content="Execute" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="53" Margin="196,12,0,0" Click="BTN_ProcessMostCommonEmailAddresses_Click" FontWeight="Bold"/>
             <ListView x:Name="ListView_MostCommonEmails" HorizontalAlignment="Left" Height="109" Margin="10,95,0,0" VerticalAlignment="Top" Width="239"/>
             <TextBox x:Name="TXT_Box_NumberOfRecords" HorizontalAlignment="Left" Height="23" Margin="171,67,0,0" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="78"/>
             <TextBlock HorizontalAlignment="Left" Margin="10,67,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23"><Run Text="Insert "/><Run Text="number of records -&gt;"/></TextBlock>
         </Grid>
-        <Grid x:Name="Panel_LargestNumberOfPeopleLivingClose" HorizontalAlignment="Left" Height="225" Margin="1110,33,0,0" VerticalAlignment="Top" Width="280" Background="#FFD6D6D6">
-            <TextBlock HorizontalAlignment="Left" Margin="10,7,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="181" FontWeight="Bold" Text="Largest number of people leaving close to each other"/>
-            <TextBlock HorizontalAlignment="Left" Margin="10,44,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="188" Height="23"><Run Text="Insert "/><Run Text="Postcode "/><Run Text="column "/><Run Text="name "/><Run Text="-&gt;"/></TextBlock>
-            <TextBox x:Name="TXT_Box_LargestNumberOfPeopleCloseNumberRecords" HorizontalAlignment="Left" Height="23" Margin="192,72,0,0" TextWrapping="Wrap" Text="3" VerticalAlignment="Top" Width="78"/>
-            <TextBlock HorizontalAlignment="Left" Margin="10,72,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23"><Run Text="Insert "/><Run Text="number of records -&gt;"/></TextBlock>
-            <Button x:Name="BTN_DownloadData" Content="Execute" HorizontalAlignment="Left" Margin="194,17,0,0" VerticalAlignment="Top" Width="76" Click="BTN_DownloadData_Click" Background="#FFCFCFCF"/>
-            <TextBox x:Name="TXT_Box_PostcodeColumnName" HorizontalAlignment="Left" Height="23" Margin="192,44,0,0" TextWrapping="Wrap" Text="postal" VerticalAlignment="Top" Width="78"/>
-            <TextBox x:Name="TXT_Box_ClusteringRange" HorizontalAlignment="Left" Height="23" Margin="192,100,0,0" TextWrapping="Wrap" Text="150" VerticalAlignment="Top" Width="78"/>
-            <TextBlock HorizontalAlignment="Left" Margin="10,100,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23" Text="Insert clustering range (km)"/>
-            <TextBox x:Name="TXT_Box_MinAmountPointsPerCluster" HorizontalAlignment="Left" Height="23" Margin="192,128,0,0" TextWrapping="Wrap" Text="2" VerticalAlignment="Top" Width="78"/>
-            <TextBlock HorizontalAlignment="Left" Margin="10,128,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="35"><Run Text="Insert "/><Run Text="minimum amount of points per cluster"/></TextBlock>
+        <Grid x:Name="Panel_PeopleGeoClose" HorizontalAlignment="Left" Height="225" Margin="1110,33,0,0" VerticalAlignment="Top" Width="280" Background="#FFD6D6D6">
+
+            <Grid x:Name="Panel_Fetching" HorizontalAlignment="Left" Height="77" VerticalAlignment="Top" Width="280">
+                <TextBlock HorizontalAlignment="Left" Margin="10,12,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="181" FontWeight="Bold" Text="Fetch data from Postcodes.io"/>
+                <TextBlock HorizontalAlignment="Left" Margin="10,38,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="188" Height="23"><Run Text="Insert "/><Run Text="Postcode "/><Run Text="column "/><Run Text="name "/><Run Text="-&gt;"/></TextBlock>
+                <Button x:Name="BTN_DownloadData" Content="Fetch" HorizontalAlignment="Left" Margin="194,10,0,0" VerticalAlignment="Top" Width="76" Click="BTN_FetchDataFromAPI_Click" Background="#FFCFCFCF" FontWeight="Bold"/>
+                <TextBox x:Name="TXT_Box_PostcodeColumnName" HorizontalAlignment="Left" Height="23" Margin="194,38,0,0" TextWrapping="Wrap" Text="postal" VerticalAlignment="Top" Width="76"/>
+            </Grid>
+            <Grid  x:Name="Panel_CalculatePeopleGeoClose" HorizontalAlignment="Left" Height="133" Margin="0,92,0,0" VerticalAlignment="Top" Width="280">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="TXT_Box_LargestNumberOfPeopleCloseNumberRecords" HorizontalAlignment="Left" Height="23" Margin="17,32,0,0" TextWrapping="Wrap" Text="3" VerticalAlignment="Top" Width="78" Grid.Column="1"/>
+                <TextBlock HorizontalAlignment="Left" Margin="10,32,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="155" Height="23"><Run Text="Insert "/><Run Text="number of records -&gt;"/></TextBlock>
+                <TextBox x:Name="TXT_Box_ClusteringRange" HorizontalAlignment="Left" Height="23" Margin="17,60,0,0" TextWrapping="Wrap" Text="150" VerticalAlignment="Top" Width="78" Grid.Column="1"/>
+                <TextBlock HorizontalAlignment="Left" Margin="10,60,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="170" Height="23" Grid.ColumnSpan="2"><Run Text="Insert clustering range (km)"/><Run Text=" -&gt;"/></TextBlock>
+                <TextBox x:Name="TXT_Box_MinAmountPointsPerCluster" HorizontalAlignment="Left" Height="23" Margin="17,94,0,0" TextWrapping="Wrap" Text="2" VerticalAlignment="Top" Width="78" Grid.Column="1"/>
+                <TextBlock HorizontalAlignment="Left" Margin="10,88,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="170" Height="35" Grid.ColumnSpan="2"><Run Text="Insert "/><Run Text="minimum amount of points per cluster"/><Run Text=" -&gt;"/></TextBlock>
+                <TextBlock HorizontalAlignment="Left" Margin="10,-5,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="181" FontWeight="Bold" Text="Calculate largest groups of people geografically close" Grid.ColumnSpan="2"/>
+                <Button x:Name="BTN_CalculatePeopleGeoClose" Content="Execute" HorizontalAlignment="Left" Margin="18,4,0,0" VerticalAlignment="Top" Width="77" Click="BTN_CalculatePeopleGeoClose_Click" Grid.Column="1" FontWeight="Bold"/>
+            </Grid>
 
         </Grid>
 
@@ -61,16 +72,13 @@
         <TextBlock HorizontalAlignment="Left" Margin="615,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="190"><Run Text="Coordinates Data Table view"/><LineBreak/><Run/></TextBlock>
         <TextBlock x:Name="TXT_Block_NumberOfRecordsImported" HorizontalAlignment="Left" Margin="391,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="201" TextAlignment="Right"><Run Text="Number of records:"/></TextBlock>
         <TextBlock x:Name="TXT_Block_LoadingTime" HorizontalAlignment="Left" Margin="160,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="216" Height="23" Text="Loading time: " TextAlignment="Right"/>
-        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="1315,270,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
-
+        <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Result_PeopleGeoClose" HorizontalAlignment="Left" Height="315" Margin="835,295,0,0" VerticalAlignment="Top" Width="555"/>
+        <TextBlock HorizontalAlignment="Left" Margin="835,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="350"><Run Text="Largest number of people leaving close to each other"/><LineBreak/><Run Text=""/></TextBlock>
 
         <Grid x:Name="Panel_OverlayStatus" Visibility="Hidden">
             <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="859" Margin="10,0,0,0" VerticalAlignment="Top" Width="1432" Background="#66000000"/>
-            <TextBlock x:Name="TXT_Block_Status" HorizontalAlignment="Left" Margin="650,425,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="20" Background="#FFBFCDDB" Height="32" Width="175" TextAlignment="Center"><Run FontWeight="Bold" Text="Status:"/></TextBlock>
-          
+            <TextBlock x:Name="TXT_Block_Status" HorizontalAlignment="Left" Margin="555,430,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontSize="20" Background="#FFBFCDDB" Height="32" Width="375" TextAlignment="Center"><Run FontWeight="Bold" Text="Status:"/></TextBlock>
         </Grid>
-        <DataGrid ItemsSource="{Binding}" x:Name="DataGrid_Result_PeopleGeoClose" HorizontalAlignment="Left" Height="315" Margin="835,295,0,0" VerticalAlignment="Top" Width="555"/>
-        <TextBlock HorizontalAlignment="Left" Margin="835,274,0,0" TextWrapping="Wrap" VerticalAlignment="Top" FontWeight="Bold" Width="350"><Run Text="Largest number of people leaving close to each other"/><LineBreak/><Run Text=""/></TextBlock>
 
 
 

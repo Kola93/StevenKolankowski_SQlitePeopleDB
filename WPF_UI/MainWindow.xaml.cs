@@ -39,6 +39,7 @@ namespace WPF_UI
         string _Field_CSV_Separator;
         string _Field_CSV_NewDBName;
         string _Field_CSV_NewMainTableName;
+        string _PostcodeColumnName;
 
         int _NumberOfEmailRecords;
         int _NumberOfPeopleGeoCloseRecords;
@@ -86,18 +87,35 @@ namespace WPF_UI
         {
             InitializeComponent();
             ResetToDefault();
-           
-            TXT_Box_CSV_Directory.Text = "C:/Users/Kola-Desktop/Downloads/uk-500/test.csv"; // temp only!
+                     
             _CurrentDatabase_CoordinatesTableName = "Coordinates";
-
-            _Data = new DataTable();
-            _DataCoordinates = new DataTable();
-            _DataPeopleGeoCloseResult = new DataTable();
-            _ProcessingDataTime = new Stopwatch();
-
         }
 
-        #region Buttons
+        #region UI interaction
+        private void CB_Database_Checked(object sender, RoutedEventArgs e)
+        {
+            TXT_Box_CSV_Directory.IsEnabled = false;
+            BTN_CSV_Browse.IsEnabled = false;
+            CB_Csv.IsChecked = false;
+            TXT_Box_CSV_Separator.IsEnabled = false;
+
+            TXT_Box_Database_Directory.IsEnabled = true;
+            BTN_Database_Browse.IsEnabled = true;
+            CB_Database.IsChecked = true;
+            TXT_Box_Database_TableName.IsEnabled = true;
+        }
+        private void CB_Csv_Checked(object sender, RoutedEventArgs e)
+        {
+            TXT_Box_CSV_Directory.IsEnabled = true;
+            BTN_CSV_Browse.IsEnabled = true;
+            CB_Csv.IsChecked = true;
+            TXT_Box_CSV_Separator.IsEnabled = true;
+
+            TXT_Box_Database_Directory.IsEnabled = false;
+            BTN_Database_Browse.IsEnabled = false;
+            CB_Database.IsChecked = false;
+            TXT_Box_Database_TableName.IsEnabled = false;
+        }
         private void BTN_CSV_Browse_Click(object sender, RoutedEventArgs e)
         {
             TXT_Box_CSV_Directory.Text = GetFileNameFromFileSelection(".csv");
@@ -164,16 +182,36 @@ namespace WPF_UI
             }
             dataGrid.DataContext = _Data.DefaultView;
             HideOverlayMessage();
-            SetVisibility(Panel_MostCommonEmailAddresses, Visibility.Visible);
-            SetVisibility(Panel_LargestNumberOfPeopleLivingClose, Visibility.Visible);
+            SetActive(Panel_MostCommonEmailAddresses, true);
+            SetActive(Panel_PeopleGeoClose, true);
             SetActive(Panel_DirectorySelection, false);
         }
-        private void BTN_DownloadData_Click(object sender, RoutedEventArgs e)
+        private async void BTN_FetchDataFromAPI_Click(object sender, RoutedEventArgs e)
         {
             if (CheckPostcodeFieldValidity() == true)
             {
-                CreateNewCoordinateTableInDatabase();
-                CreateDataTable_Coordinates();
+                ShowOverlayMessage("Working...");
+                if (!CreateNewCoordinateTableInDatabase())
+                {
+                    HideOverlayMessage();
+                    return;
+                }
+                var postcodes = GetPostcodesFromDBColumn();                
+                if (postcodes == null)
+                {
+                    HideOverlayMessage();
+                    return;
+                }
+                
+                bool Result_FetchingData = await FetchDataFromAPIWithPostcodes(postcodes);
+                if (!Result_FetchingData)
+                {
+                    MessageBox.Show("Fetching data failed!", "Error!");
+                    HideOverlayMessage();
+                    return;
+                }
+                HideOverlayMessage();
+                SetActive(Panel_CalculatePeopleGeoClose, true);
             }
                    
         }
@@ -181,42 +219,28 @@ namespace WPF_UI
         {
             ResetToDefault();
         }
-        #endregion Buttons
+        private async void BTN_CalculatePeopleGeoClose_Click(object sender, RoutedEventArgs e)
+        {
+            if (CheckPeopleGeoCloseFieldsValidity() == true)
+            {
+                DataGrid_Result_PeopleGeoClose.DataContext = null;
+                Task<bool> Task_DBScanAlgorithm = new Task<bool>(ExecuteDBScanAlgorithm);
+                Task_DBScanAlgorithm.Start();
+                ShowOverlayMessage("Calculating...");
 
-        #region UI_Interaction
-        private void CB_Database_Checked(object sender, RoutedEventArgs e)
-        {
-            TXT_Box_CSV_Directory.IsEnabled = false;
-            BTN_CSV_Browse.IsEnabled = false;
-            CB_Csv.IsChecked = false;
-            TXT_Box_CSV_Separator.IsEnabled = false;
-
-            TXT_Box_Database_Directory.IsEnabled = true;
-            BTN_Database_Browse.IsEnabled = true;
-            CB_Database.IsChecked = true;
-            TXT_Box_Database_TableName.IsEnabled = true;
+                bool DBScanAlgorithmResult = await Task_DBScanAlgorithm;
+                if (DBScanAlgorithmResult == false)
+                {
+                    MessageBox.Show("DBScan Algorithm failed!", "Error");
+                    HideOverlayMessage();
+                    return;
+                }
+                DataGrid_Result_PeopleGeoClose.DataContext = _DataPeopleGeoCloseResult.DefaultView;
+                HideOverlayMessage();
+            }
         }
-        private void CB_Csv_Checked(object sender, RoutedEventArgs e)
-        {
-            TXT_Box_CSV_Directory.IsEnabled = true;
-            BTN_CSV_Browse.IsEnabled = true;
-            CB_Csv.IsChecked = true;
-            TXT_Box_CSV_Separator.IsEnabled = true;
-
-            TXT_Box_Database_Directory.IsEnabled = false;
-            BTN_Database_Browse.IsEnabled = false;
-            CB_Database.IsChecked = false;
-            TXT_Box_Database_TableName.IsEnabled = false;
-        }
-        private void SetActive(UIElement p_Element, bool p_Active)
-        {
-            p_Element.IsEnabled = p_Active;
-        }
-        private void SetVisibility(UIElement p_Element, Visibility p_NewVisibility)
-        {
-            p_Element.Visibility = p_NewVisibility;
-        }
-        #endregion UI_Interaction        
+        #endregion UI interaction
+  
 
         #region Insert
         private void InsertRowsInDataTable(SQLiteDataReader reader, ref DataTable p_DataTable)
@@ -246,8 +270,35 @@ namespace WPF_UI
             }
             return true;
         }
+        private void InsertDataInMainTableFromStream(StreamReader p_StreamReader)
+        {
+            try
+            {
+                while (!p_StreamReader.EndOfStream)
+                {
+                    string line = p_StreamReader.ReadLine();
+                    if (string.IsNullOrEmpty(line))
+                    {
+                        continue;
+                    }
+                    DataRow importedRow = _Data.NewRow();
+                    string[] values = ParseLine(line);
+
+                    for (int i = 0; i < values.Count(); i++)
+                    {
+                        importedRow[i] = RemoveSymbolsInBeginAndEnd(values[i], '"');
+                    }
+                    _Data.Rows.Add(importedRow);
+
+                }
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString());
+            }
+        }
         #endregion Insert
-               
+
         #region Create
         private bool CreateTable(SQLiteCommand cmd, string p_TableName, string headers)
         {
@@ -329,7 +380,7 @@ namespace WPF_UI
             }
 
         }
-        private void CreateNewCoordinateTableInDatabase()
+        private bool CreateNewCoordinateTableInDatabase()
         {
             try
             {
@@ -348,25 +399,21 @@ namespace WPF_UI
                     transaction.Rollback();
                     connection.Close();
                     SQLiteConnection.ClearAllPools();
-                    return;
+                    return false;
                 }
                 transaction.Commit();
                 connection.Close();
                 SQLiteConnection.ClearAllPools();
+                return true;
             }
             catch (Exception error)
             {
                 MessageBox.Show(error.Message);
+                return false;
             }
         }
-        public void CreateDataTable_Coordinates()
-        {
-            _DataCoordinates = null;
-            _DataCoordinates = new DataTable();
-            /* Setup Headers */
-            _DataCoordinates.Columns.Add("postcode");
-            _DataCoordinates.Columns.Add("longitude");
-            _DataCoordinates.Columns.Add("latitude");
+        public List<string> GetPostcodesFromDBColumn()
+        {           
             try
             {            
                 List<string> postcodes = new List<string>();
@@ -377,28 +424,25 @@ namespace WPF_UI
                 SQLiteCommand command = new SQLiteCommand(connection);
                 var transaction = connection.BeginTransaction();
 
-                SQLiteDataReader reader = GetColumnReader_SQLiteCommand(command, _CurrentDatabase_MainTableName, TXT_Box_PostcodeColumnName.Text);
+                SQLiteDataReader reader = GetColumnReader_SQLiteCommand(command, _CurrentDatabase_MainTableName, _PostcodeColumnName);
                 if (reader == null)
                 {
                     MessageBox.Show("Couln't get column", "Error!");
-                    return;
-                }
-                BTN_DownloadData.IsEnabled = false;
-                BTN_Reset.IsEnabled = false;
+                    return null;
+                }                
                 /* Add each postcode to a list */
                 while (reader.Read())
                 {
                     string value = reader.GetString(0);
                     postcodes.Add(value);
                 }
-                FetchDataFromAPIWithPostcodes(postcodes);                
-                transaction.Commit();               
+                transaction.Commit();
+                return postcodes;
             }
             catch (Exception error)
             {
-                BTN_DownloadData.IsEnabled = true;
-                BTN_Reset.IsEnabled = true;
                 MessageBox.Show(error.ToString());
+                return null;
             }
         }        
         #endregion Create
@@ -462,12 +506,8 @@ namespace WPF_UI
                     _Data.Columns.Add(cleanHeaderColumn);
                 }
 
-                ProcessStreamReader(sr);
+                InsertDataInMainTableFromStream(sr);
 
-                Dispatcher.Invoke(() =>
-                {
-                    TXT_Box_CSV_Directory.Text = string.Empty;
-                });
                 _ProcessingDataTime.Stop();
 
                 return true;
@@ -477,95 +517,83 @@ namespace WPF_UI
                 MessageBox.Show(error.Message);
                 return false;
             }
-        }
-        private void ProcessStreamReader(StreamReader p_StreamReader)
+        }       
+        private async Task<bool> FetchDataFromAPIWithPostcodes(List<string> p_Postcodes)
         {
             try
             {
-                while (!p_StreamReader.EndOfStream)
-                {
-                    string line = p_StreamReader.ReadLine();
-                    if (string.IsNullOrEmpty(line))
-                    {
-                        continue;
-                    }
-                    DataRow importedRow = _Data.NewRow();
-                    string[] values = ParseLine(line);
+                _DataCoordinates = null;
+                _DataCoordinates = new DataTable();
+                /* Setup Headers */
+                _DataCoordinates.Columns.Add("postcode");
+                _DataCoordinates.Columns.Add("longitude");
+                _DataCoordinates.Columns.Add("latitude");
 
-                    for (int i = 0; i < values.Count(); i++)
-                    {
-                        importedRow[i] = RemoveSymbolsInBeginAndEnd(values[i], '"');
+                HttpClient client = new HttpClient();
+                /* Process request for coordinates to API */
+                int PostCodeIndex = 0;
+                while (PostCodeIndex < p_Postcodes.Count)
+                {
+                    string json = "{\"postcodes\":[";
+                    // 100 is the max amount of postcodes that the API can handle
+                    for (int i = 0; i < 100; i++)
+                    {                        
+                        json += "\"" + p_Postcodes[PostCodeIndex] + "\",";
+                        PostCodeIndex++;
+                        // Break if the total number of postcodes is < 100
+                        if (PostCodeIndex == p_Postcodes.Count)
+                        {
+                            break;
+                        }
                     }
-                    _Data.Rows.Add(importedRow);
-                   
+                    /* Remove last "," */
+                    json = json.Remove(json.Length - 1);
+                    json += "]}";
+                    ShowOverlayMessage("Downloaded coordinates: " + PostCodeIndex.ToString() + "/" + p_Postcodes.Count.ToString());
+                    /* Call API with list of postcodes */
+                    var response = await client.PostAsync("https://api.postcodes.io/postcodes", new StringContent(json, Encoding.UTF8, "application/json"));
+                    string responseObjectJson = await response.Content.ReadAsStringAsync();
+                    var settings = new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Ignore,
+                        MissingMemberHandling = MissingMemberHandling.Ignore
+                    };
+                    var responseObject = JsonConvert.DeserializeObject<ResponseObject>(responseObjectJson, settings);
+
+                    int status = responseObject.status;
+                    if (status == 404)
+                    {
+                        MessageBox.Show("Error 404: Couldn't get the list of coordinates from API", "Error!");
+                        return false;
+                    }
+
+                    /* Assign values to DataTable */
+                    for (int i = 0; i < responseObject.result.Length; i++)
+                    {
+                        DataRow newRow = _DataCoordinates.NewRow();
+                        newRow[0] = responseObject.result[i].query;
+                        if (responseObject.result[i].result == null)
+                        {
+                            newRow[1] = "";
+                            newRow[2] = "";
+                        }
+                        else
+                        {
+                            newRow[1] = responseObject.result[i].result.longitude;
+                            newRow[2] = responseObject.result[i].result.latitude;
+                        }
+                        _DataCoordinates.Rows.Add(newRow);
+                        DataGrid_Coordinates.DataContext = _DataCoordinates.DefaultView;
+                    }
                 }
+                return true;
             }
-            catch(Exception error)
+            catch (Exception error)
             {
-                MessageBox.Show(error.ToString());
-            }    
-        }
-        private async void FetchDataFromAPIWithPostcodes(List<string> p_Postcodes)
-        {
-            HttpClient client = new HttpClient();
-            /* Process request for coordinates to API */
-            int PostCodeIndex = 0;
-            while (PostCodeIndex < p_Postcodes.Count)
-            {
-                string json = "{\"postcodes\":[";
-                // 100 is the max amount of postcodes that the API can handle
-                for (int i = 0; i < 100; i++)
-                {
-                    // Break if the total number of postcodes is < 100
-                    if (i == p_Postcodes.Count)
-                    {
-                        break;
-                    }
-                    json += "\"" + p_Postcodes[PostCodeIndex] + "\",";
-                    PostCodeIndex++;
-                }
-                /* Remove last "," */
-                json = json.Remove(json.Length - 1);
-                json += "]}";
-
-                /* Call API with list of postcodes */
-                var response = await client.PostAsync("https://api.postcodes.io/postcodes", new StringContent(json, Encoding.UTF8, "application/json"));
-                string responseObjectJson = await response.Content.ReadAsStringAsync();
-                var settings = new JsonSerializerSettings
-                {
-                    NullValueHandling = NullValueHandling.Ignore,
-                    MissingMemberHandling = MissingMemberHandling.Ignore
-                };
-                var responseObject = JsonConvert.DeserializeObject<ResponseObject>(responseObjectJson, settings);
-
-                int status = responseObject.status;
-                if (status == 404)
-                {
-                    MessageBox.Show("Error 404: Couldn't get the list of coordinates from API", "Error!");
-                    return;
-                }
-
-                /* Assign values to DataTable */
-                for (int i = 0; i < responseObject.result.Length; i++)
-                {
-                    DataRow newRow = _DataCoordinates.NewRow();
-                    newRow[0] = responseObject.result[i].query;
-                    if (responseObject.result[i].result == null)
-                    {
-                        newRow[1] = "";
-                        newRow[2] = "";
-                    }
-                    else
-                    {
-                        newRow[1] = responseObject.result[i].result.longitude;
-                        newRow[2] = responseObject.result[i].result.latitude;
-                    }
-                    _DataCoordinates.Rows.Add(newRow);
-                    DataGrid_Coordinates.DataContext = _DataCoordinates.DefaultView;
-                }
+                MessageBox.Show(error.ToString(), "Error!");
+                HideOverlayMessage();
+                return false;
             }
-            MessageBox.Show("Fetching complete!","SUCCESS");
-            BTN_Reset.IsEnabled = true;
         }
         #endregion Read
 
@@ -581,7 +609,7 @@ namespace WPF_UI
                 SQLiteDataReader reader = GetColumnReader_SQLiteCommand(command, _CurrentDatabase_MainTableName, TXT_Box_EmailColumn.Text);
                 if (reader == null)
                 {
-                    MessageBox.Show("Couln't get column", "Error!");
+                    MessageBox.Show("Couln't get email column", "Error!");
                     return;
                 }
 
@@ -637,285 +665,11 @@ namespace WPF_UI
                 MessageBox.Show(error.Message);
             }
 
-        }       
-        #endregion Execute
-        
-        #region Utility
-        private string[] ParseLine(string rowLine)
-        {
-            string newSeparator = "~";
-            string tempRowLine = rowLine.Replace(_Field_CSV_Separator, newSeparator);
-            return tempRowLine.Split(newSeparator.ToCharArray());
-
         }
-        private static string RemoveSymbolsInBeginAndEnd(string p_EntryString, char character)
-        {
-            if (p_EntryString.Contains(character))
-            {
-                if (p_EntryString[0] == character)
-                    p_EntryString = p_EntryString.Remove(0, 1);
-                if (p_EntryString[p_EntryString.Length - 1] == character)
-                    p_EntryString = p_EntryString.Remove(p_EntryString.Length - 1);
-            }
-            return p_EntryString;
-        }
-        void ShowProcessingDataTime()
-        {
-            if (_ProcessingDataTime.Elapsed.TotalMilliseconds < 1000)
-            {
-                double time = Math.Truncate(_ProcessingDataTime.Elapsed.TotalMilliseconds * 100) / 100;
-                TXT_Block_LoadingTime.Text = "Loading time: " + time.ToString() + "ms";
-            }
-            else
-            {
-                double time = Math.Truncate(_ProcessingDataTime.Elapsed.TotalSeconds * 100) / 100;
-                TXT_Block_LoadingTime.Text = "Loading time: " + time.ToString() + "s";
-            }
-        }
-        private bool CheckEmailFieldsValidity()
-        {
-            if (TXT_Box_EmailColumn.Text == string.Empty)
-            {
-                MessageBox.Show("Insert Email column name!", "Error!");
-                return false;
-            }
-            if (TXT_Box_NumberOfRecords.Text == string.Empty)
-            {
-                MessageBox.Show("Insert number of records!", "Error!");
-                return false;
-            }
-            if (!int.TryParse(TXT_Box_NumberOfRecords.Text, out _NumberOfEmailRecords))
-            {
-                MessageBox.Show("You can only use numbers in records field!!", "Error!");
-                return false;
-            }
-            return true;
-        }
-        private bool CheckImportFieldsValidityAndSetupValues()
-        {
-            if (TXT_Box_CSV_Separator.Text == string.Empty)
-            {
-                MessageBox.Show("Insert Separator symbol", "Error!");
-                return false;
-            }
-            if (TXT_Box_CSV_NewMainTableName.Text == string.Empty)
-            {
-                MessageBox.Show("Insert New Table Name!", "Error!");
-                return false;
-            }
-            if (TXT_Box_CSV_NewDBName.Text == string.Empty)
-            {
-                MessageBox.Show("Insert New Database name!", "Error!");
-                return false;
-            }
-            _Field_CSV_Directory = TXT_Box_CSV_Directory.Text;
-            _Field_CSV_Separator = TXT_Box_CSV_Separator.Text;
-            _Field_CSV_NewDBName = TXT_Box_CSV_NewDBName.Text;
-            _Field_CSV_NewMainTableName = TXT_Box_CSV_NewMainTableName.Text;
-            return true;
-        }
-        private bool CheckPostcodeFieldValidity()
-        {
-            if (TXT_Box_PostcodeColumnName.Text == string.Empty)
-            {
-                MessageBox.Show("Insert Postcode name symbol", "Error!");
-                return false;
-            }
-            return true;
-        }        
-        private bool CheckPeopleGeoCloseFieldsValidity()
-        {
-            if (!int.TryParse(TXT_Box_LargestNumberOfPeopleCloseNumberRecords.Text, out _NumberOfPeopleGeoCloseRecords))
-            {
-                MessageBox.Show("You can only use numbers in records field!!", "Error!");
-                return false;
-            }
-
-            bool parsingResult_minAmount = int.TryParse(TXT_Box_MinAmountPointsPerCluster.Text, out _MinAmountOfPeoplePerCloster);
-            if (!parsingResult_minAmount)
-            {
-                MessageBox.Show("Insert valid number in field minimum amount of points per cluster!", "Error!");
-                return false;
-            }
-            if (parsingResult_minAmount)
-            {
-                if(_MinAmountOfPeoplePerCloster <= 1)
-                {
-                    MessageBox.Show("Insert number > 2 in field minimum amount of points per cluster!", "Error!");
-                    return false;
-                }               
-            }
-
-            bool parsingResult_Range = int.TryParse(TXT_Box_ClusteringRange.Text, out _RangeBetweenEachLocation);
-            if (!parsingResult_Range)
-            {
-                MessageBox.Show("Insert valid number in range!", "Error!");
-                return false;
-                
-            }
-            if (parsingResult_Range)
-            {
-                if (_RangeBetweenEachLocation <= 0)
-                {
-                    MessageBox.Show("Insert number > 0 in field range!", "Error!");
-                    return false;
-                }
-            }
-            return true;
-        }
-        private bool CheckDatabaseTableNameFieldValidityAndSetupValues()
-        {
-            if (TXT_Box_Database_TableName.Text == string.Empty)
-            {
-                MessageBox.Show("Insert Table Name", "Error!");
-                return false;
-            }
-            _CurrentDatabase_MainTableName = TXT_Box_Database_TableName.Text;
-            return true;
-        }
-        private SQLiteDataReader GetColumnReader_SQLiteCommand(SQLiteCommand command, string p_database, string p_column)
+        private bool ExecuteDBScanAlgorithm()
         {
             try
             {
-                command.CommandText = "SELECT " + p_column + " FROM " + p_database;
-                command.ExecuteNonQuery();
-                SQLiteDataReader reader = command.ExecuteReader();
-                return reader;
-            }
-            catch (Exception error)
-            {
-                MessageBox.Show(error.ToString());
-                return null;
-            }
-        }
-        private string GetFileNameFromFileSelection(string p_FileExtension)
-        {
-            OpenFileDialog file = new OpenFileDialog();
-            file.Filter = "(*" + p_FileExtension + ")|*" + p_FileExtension;
-            if (file.ShowDialog() == true)
-            {
-                BTN_Import.IsEnabled = true;
-                return file.FileName;
-            }
-            return "";
-        }
-        void DropTableIfExist(SQLiteCommand p_Command, string p_CommandText)
-        {
-            try
-            {
-                p_Command.CommandText = p_CommandText;
-                p_Command.ExecuteNonQuery();
-            }
-            catch (Exception error)
-            {
-                MessageBox.Show(error.ToString());
-            }
-        }
-        bool CheckIfTableExist(SQLiteCommand p_Command, string p_CommandText)
-        {
-            try
-            {
-                p_Command.CommandText = p_CommandText;
-                p_Command.ExecuteNonQuery();
-            }
-            catch (Exception error)
-            {
-                MessageBox.Show(error.ToString());
-                return false;
-            }
-            return true;
-        }
-        bool DeleteTable(SQLiteCommand p_Command, string p_CommandText)
-        {
-            try
-            {
-                p_Command.CommandText = p_CommandText;
-                p_Command.ExecuteNonQuery();
-            }
-            catch (Exception error)
-            {
-                MessageBox.Show(error.ToString());
-                return false;
-            }
-            return true;
-        }
-        private void ResetToDefault()
-        {
-            TXT_Block_LoadingTime.Text = "Loading time: ";
-            TXT_Box_EmailColumn.Text = "email";
-            TXT_Box_NumberOfRecords.Text = "1";
-            TXT_Box_CSV_Separator.Text = "\",\"";
-            TXT_Box_Database_TableName.Text = "MyNewTable";
-            TXT_Box_CSV_NewDBName.Text = "MyNewDatabase.db";
-            BTN_Import.IsEnabled = false;
-            BTN_DownloadData.IsEnabled = true;
-            TXT_Box_LargestNumberOfPeopleCloseNumberRecords.Text = "3";
-            TXT_Box_ClusteringRange.Text = "150";
-            TXT_Box_MinAmountPointsPerCluster.Text = "2";
-
-            _Data = null;
-            _Data = new DataTable();
-            _DataCoordinates = null;
-            _DataCoordinates = new DataTable();
-
-            CB_Csv.IsChecked = true;
-            dataGrid.DataContext = null;
-            DataGrid_Coordinates.DataContext = null;
-
-            _ProcessingDataTime = null;
-            _ProcessingDataTime = new Stopwatch();
-
-            SetVisibility(Panel_MostCommonEmailAddresses, Visibility.Hidden);
-            SetVisibility(Panel_LargestNumberOfPeopleLivingClose, Visibility.Hidden);
-            SetActive(Panel_DirectorySelection, true);
-        }
-        #endregion Utility
-        
-        private void ShowOverlayMessage(string p_Message)
-        {
-            SetVisibility(Panel_OverlayStatus, Visibility.Visible);
-            TXT_Block_Status.Text = p_Message;
-        }
-        private void HideOverlayMessage()
-        {
-            SetVisibility(Panel_OverlayStatus, Visibility.Hidden);
-        }
-        private async void Button_Click(object sender, RoutedEventArgs e)
-        {
-            if(CheckPeopleGeoCloseFieldsValidity() == true)
-            {
-                Task<bool> Task_DBScanAlgorithm = new Task<bool>(DBScanAlgorithm);
-                Task_DBScanAlgorithm.Start();
-                ShowOverlayMessage("Calculating...");
-
-                bool DBScanAlgorithmResult = await Task_DBScanAlgorithm;
-                if (DBScanAlgorithmResult == false)
-                {
-                    MessageBox.Show("DBScan Algorithm failed!", "Error");
-                    HideOverlayMessage();
-                    return;
-                }
-               
-                HideOverlayMessage();
-            }            
-        }
-    
-        private Vector2d ConvertGeoCoordinatesToCartesian(float p_Longitude, float p_Latitude)
-        {
-            Vector2d result;
-            result._X = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Cos(p_Longitude);
-            result._Y = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Sin(p_Longitude);
-            return result;
-        }
-        private bool DBScanAlgorithm()
-        {
-            try
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    DataGrid_Result_PeopleGeoClose.DataContext = null;
-                });
-
                 /* Setup coordinate list */
                 List<Location> Locations = new List<Location>();
                 for (int i = 0; i < _DataCoordinates.Rows.Count; i++)
@@ -1002,7 +756,273 @@ namespace WPF_UI
                 return false;
             }
         }
+        #endregion Execute
 
+        #region Utility
+        private void SetActive(UIElement p_Element, bool p_Active)
+        {
+            p_Element.IsEnabled = p_Active;
+        }
+        private void SetVisibility(UIElement p_Element, Visibility p_NewVisibility)
+        {
+            p_Element.Visibility = p_NewVisibility;
+        }
+        private string[] ParseLine(string rowLine)
+        {
+            string newSeparator = "~";
+            string tempRowLine = rowLine.Replace(_Field_CSV_Separator, newSeparator);
+            return tempRowLine.Split(newSeparator.ToCharArray());
+
+        }
+        private static string RemoveSymbolsInBeginAndEnd(string p_EntryString, char character)
+        {
+            if (p_EntryString.Contains(character))
+            {
+                if (p_EntryString[0] == character)
+                    p_EntryString = p_EntryString.Remove(0, 1);
+                if (p_EntryString[p_EntryString.Length - 1] == character)
+                    p_EntryString = p_EntryString.Remove(p_EntryString.Length - 1);
+            }
+            return p_EntryString;
+        }
+        private void ShowProcessingDataTime()
+        {
+            if (_ProcessingDataTime.Elapsed.TotalMilliseconds < 1000)
+            {
+                double time = Math.Truncate(_ProcessingDataTime.Elapsed.TotalMilliseconds * 100) / 100;
+                TXT_Block_LoadingTime.Text = "Loading time: " + time.ToString() + "ms";
+            }
+            else
+            {
+                double time = Math.Truncate(_ProcessingDataTime.Elapsed.TotalSeconds * 100) / 100;
+                TXT_Block_LoadingTime.Text = "Loading time: " + time.ToString() + "s";
+            }
+        }
+        private bool CheckEmailFieldsValidity()
+        {
+            if (TXT_Box_EmailColumn.Text == string.Empty)
+            {
+                MessageBox.Show("Insert Email column name!", "Error!");
+                return false;
+            }
+            if (TXT_Box_NumberOfRecords.Text == string.Empty)
+            {
+                MessageBox.Show("Insert number of records!", "Error!");
+                return false;
+            }
+            if (!int.TryParse(TXT_Box_NumberOfRecords.Text, out _NumberOfEmailRecords))
+            {
+                MessageBox.Show("You can only use numbers in records field!!", "Error!");
+                return false;
+            }
+            return true;
+        }
+        private bool CheckImportFieldsValidityAndSetupValues()
+        {
+            if (TXT_Box_CSV_Separator.Text == string.Empty)
+            {
+                MessageBox.Show("Insert Separator symbol", "Error!");
+                return false;
+            }
+            if (TXT_Box_CSV_NewMainTableName.Text == string.Empty)
+            {
+                MessageBox.Show("Insert New Table Name!", "Error!");
+                return false;
+            }
+            if (TXT_Box_CSV_NewDBName.Text == string.Empty)
+            {
+                MessageBox.Show("Insert New Database name!", "Error!");
+                return false;
+            }
+            _Field_CSV_Directory = TXT_Box_CSV_Directory.Text;
+            _Field_CSV_Separator = TXT_Box_CSV_Separator.Text;
+            _Field_CSV_NewDBName = TXT_Box_CSV_NewDBName.Text;
+            _Field_CSV_NewMainTableName = TXT_Box_CSV_NewMainTableName.Text;
+            return true;
+        }
+        private bool CheckPostcodeFieldValidity()
+        {
+            if (TXT_Box_PostcodeColumnName.Text == string.Empty)
+            {
+                MessageBox.Show("Insert Postcode name symbol", "Error!");
+                return false;
+            }
+            _PostcodeColumnName = TXT_Box_PostcodeColumnName.Text;
+            return true;
+        }        
+        private bool CheckPeopleGeoCloseFieldsValidity()
+        {
+            if (!int.TryParse(TXT_Box_LargestNumberOfPeopleCloseNumberRecords.Text, out _NumberOfPeopleGeoCloseRecords))
+            {
+                MessageBox.Show("You can only use numbers in records field!!", "Error!");
+                return false;
+            }
+
+            bool parsingResult_minAmount = int.TryParse(TXT_Box_MinAmountPointsPerCluster.Text, out _MinAmountOfPeoplePerCloster);
+            if (!parsingResult_minAmount)
+            {
+                MessageBox.Show("Insert valid number in field minimum amount of points per cluster!", "Error!");
+                return false;
+            }
+            if (parsingResult_minAmount)
+            {
+                if(_MinAmountOfPeoplePerCloster <= 1)
+                {
+                    MessageBox.Show("Insert number > 2 in field minimum amount of points per cluster!", "Error!");
+                    return false;
+                }               
+            }
+
+            bool parsingResult_Range = int.TryParse(TXT_Box_ClusteringRange.Text, out _RangeBetweenEachLocation);
+            if (!parsingResult_Range)
+            {
+                MessageBox.Show("Insert valid number in range!", "Error!");
+                return false;
+                
+            }
+            if (parsingResult_Range)
+            {
+                if (_RangeBetweenEachLocation <= 0)
+                {
+                    MessageBox.Show("Insert number > 0 in field range!", "Error!");
+                    return false;
+                }
+            }
+            return true;
+        }
+        private bool CheckDatabaseTableNameFieldValidityAndSetupValues()
+        {
+            if (TXT_Box_Database_TableName.Text == string.Empty)
+            {
+                MessageBox.Show("Insert Table Name", "Error!");
+                return false;
+            }
+            _CurrentDatabase_MainTableName = TXT_Box_Database_TableName.Text;
+            return true;
+        }
+        private SQLiteDataReader GetColumnReader_SQLiteCommand(SQLiteCommand command, string p_database, string p_column)
+        {
+            try
+            {
+                command.CommandText = "SELECT " + p_column + " FROM " + p_database;
+                command.ExecuteNonQuery();
+                SQLiteDataReader reader = command.ExecuteReader();
+                return reader;
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString());
+                return null;
+            }
+        }
+        private string GetFileNameFromFileSelection(string p_FileExtension)
+        {
+            OpenFileDialog file = new OpenFileDialog();
+            file.Filter = "(*" + p_FileExtension + ")|*" + p_FileExtension;
+            if (file.ShowDialog() == true)
+            {
+                BTN_Import.IsEnabled = true;
+                return file.FileName;
+            }
+            return "";
+        }
+        private void DropTableIfExist(SQLiteCommand p_Command, string p_CommandText)
+        {
+            try
+            {
+                p_Command.CommandText = p_CommandText;
+                p_Command.ExecuteNonQuery();
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString());
+            }
+        }
+        private bool CheckIfTableExist(SQLiteCommand p_Command, string p_CommandText)
+        {
+            try
+            {
+                p_Command.CommandText = p_CommandText;
+                p_Command.ExecuteNonQuery();
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString());
+                return false;
+            }
+            return true;
+        }
+        private bool DeleteTable(SQLiteCommand p_Command, string p_CommandText)
+        {
+            try
+            {
+                p_Command.CommandText = p_CommandText;
+                p_Command.ExecuteNonQuery();
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString());
+                return false;
+            }
+            return true;
+        }
+        private void ResetToDefault()
+        {
+            /* Reset fields to default */
+            TXT_Block_LoadingTime.Text = "Loading time: ";
+            TXT_Box_EmailColumn.Text = "email";
+            TXT_Box_NumberOfRecords.Text = "1";
+            TXT_Box_CSV_Separator.Text = "\",\"";
+            TXT_Box_Database_TableName.Text = "MyNewTable";
+            TXT_Box_CSV_NewDBName.Text = "MyNewDatabase.db";           
+            TXT_Box_LargestNumberOfPeopleCloseNumberRecords.Text = "3";
+            TXT_Box_ClusteringRange.Text = "150";
+            TXT_Box_MinAmountPointsPerCluster.Text = "2";
+
+            /* Reset Data tables */
+            _Data = null;
+            _Data = new DataTable();
+            _DataCoordinates = null;
+            _DataCoordinates = new DataTable();
+            _DataPeopleGeoCloseResult = null;
+            _DataPeopleGeoCloseResult = new DataTable();
+
+            /* Reset buttons */
+            CB_Csv.IsChecked = true;
+            BTN_Import.IsEnabled = false;
+            BTN_DownloadData.IsEnabled = true;
+
+            /* Reset grid tables */
+            dataGrid.DataContext = null;
+            DataGrid_Coordinates.DataContext = null;
+            DataGrid_Result_PeopleGeoClose.DataContext = null;
+
+            /* Reset timer */
+            _ProcessingDataTime = null;
+            _ProcessingDataTime = new Stopwatch();
+
+            /* Reset panels */
+            SetActive(Panel_DirectorySelection, true);
+            SetActive(Panel_MostCommonEmailAddresses, false);
+            SetActive(Panel_PeopleGeoClose, false);           
+            SetActive(Panel_CalculatePeopleGeoClose, false);
+        }
+        private void ShowOverlayMessage(string p_Message)
+        {
+            SetVisibility(Panel_OverlayStatus, Visibility.Visible);
+            TXT_Block_Status.Text = p_Message;
+        }
+        private void HideOverlayMessage()
+        {
+            SetVisibility(Panel_OverlayStatus, Visibility.Hidden);
+        }
+        private Vector2d ConvertGeoCoordinatesToCartesian(float p_Longitude, float p_Latitude)
+        {
+            Vector2d result;
+            result._X = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Cos(p_Longitude);
+            result._Y = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Sin(p_Longitude);
+            return result;
+        }
         private bool ElaborateGroupingResultsAndDisplay(List<List<Location>> results)
         {
             try
@@ -1060,10 +1080,6 @@ namespace WPF_UI
                     _DataPeopleGeoCloseResult.Rows.Add(EmptyRow);
 
                 }
-                Dispatcher.Invoke(() =>
-                {
-                    DataGrid_Result_PeopleGeoClose.DataContext = _DataPeopleGeoCloseResult.DefaultView;
-                });
                 return true;
             }
             catch (Exception error)
@@ -1072,12 +1088,10 @@ namespace WPF_UI
                 return false;
             }
         }
-
         private double GetDistance(Vector2d p_location1, Vector2d p_location2)
         {
             return Math.Sqrt(Math.Pow((p_location2._X - p_location1._X), 2) + Math.Pow((p_location2._Y - p_location1._Y), 2));
         }
-
         private List<Location> GetNeighbors(List<Location> DB, Location checkingPoint, int range)
         {
             List<Location> neighbors = new List<Location>();
@@ -1091,7 +1105,8 @@ namespace WPF_UI
             }
             return neighbors;
         }
+        #endregion Utility
 
     }
-   
+
 }
