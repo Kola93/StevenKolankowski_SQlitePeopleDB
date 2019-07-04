@@ -888,6 +888,7 @@ namespace WPF_UI
 
                 int iteration = _NumberOfPeopleGeoCloseRecords;
                 var ReorderedResultList = p_Results.OrderByDescending(x => x.Count).ToList();
+              
                 /* Iterate through each cluster group */
                 foreach (var Results in ReorderedResultList)
                 {
@@ -896,6 +897,11 @@ namespace WPF_UI
                     {
                         break;
                     }
+                    /* Add quantity row */
+                    DataRow TitleRow = _DataPeopleGeoCloseResult.NewRow();
+                    TitleRow[0] = "Quantity: " + Results.Count.ToString();
+                    _DataPeopleGeoCloseResult.Rows.Add(TitleRow);
+
                     /* Iterate through each location in cluster */
                     foreach (var Location in Results)
                     {
@@ -914,8 +920,8 @@ namespace WPF_UI
                         if (RowFromMainDB != null)
                         {
                             NewRow[0] = Location._ClusterID;
-                            NewRow[1] = Location._Coordinates._X;
-                            NewRow[2] = Location._Coordinates._Y;
+                            NewRow[1] = Math.Round(Location._Coordinates._X, 2);
+                            NewRow[2] = Math.Round(Location._Coordinates._Y, 2);
                             for (int i = 0; i < RowFromMainDB.ItemArray.Length; i++)
                             {
                                 NewRow[i + 3] = RowFromMainDB.ItemArray[i];
@@ -924,8 +930,7 @@ namespace WPF_UI
                         }
                     }
 
-                    DataRow EmptyRow = _DataPeopleGeoCloseResult.NewRow();
-                    _DataPeopleGeoCloseResult.Rows.Add(EmptyRow);
+              
 
                 }
                 return true;
