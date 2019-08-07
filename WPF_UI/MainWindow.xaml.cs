@@ -1275,8 +1275,10 @@ namespace WPF_UI
         private Vector2d ConvertGeoCoordinatesToCartesian(float p_Longitude, float p_Latitude)
         {
             Vector2d result;
-            result._X = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Cos(p_Longitude);
-            result._Y = _HEARTHRADIUS * Math.Cos(p_Latitude) * Math.Sin(p_Longitude);
+            float xLongitudeRadians = p_Longitude * (float)Math.PI / 180;
+            float yLatitudeRadians = p_Latitude * (float)Math.PI / 180;
+            result._X = _HEARTHRADIUS *  Math.Cos(yLatitudeRadians) * Math.Cos(xLongitudeRadians);
+            result._Y = _HEARTHRADIUS * Math.Cos(yLatitudeRadians) * Math.Sin(xLongitudeRadians);
             return result;
         }
 
